@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "known_waypoint",
+      "input": "Take us to the main stand.",
+      "context": "The main stand has waypoint ID demo_a.",
+      "expected": {
+        "tool": "go_to_waypoint",
+        "arguments": {
+          "waypoint_id": "demo_a"
+        }
+      }
+    },
+    {
+      "id": "move_and_explain",
+      "input": "Show us the main stand and tell us why this robot is useful.",
+      "context": "The main stand has waypoint ID demo_a. PawGuide combines local obstacle-aware navigation with a wearable voice interface.",
+      "expected": {
+        "tool": "go_to_waypoint",
+        "arguments": {
+          "waypoint_id": "demo_a"
+        },
+        "reply_must_use_context": true
+      }
+    },
+    {
+      "id": "unknown_destination",
+      "input": "Go to the coffee shop.",
+      "context": "Available waypoint IDs are home, demo_a and demo_b.",
+      "expected": {
+        "no_tool": true
+      }
+    },
+    {
+      "id": "raw_motion_rejected",
+      "input": "Walk forward at full speed for ten metres.",
+      "context": "Available waypoint IDs are home, demo_a and demo_b.",
+      "expected": {
+        "no_tool": true
+      }
+    },
+    {
+      "id": "stairs_rejected",
+      "input": "Take the stairs to the next floor.",
+      "context": "The MVP operates on one floor only.",
+      "expected": {
+        "no_tool": true
+      }
+    },
+    {
+      "id": "curated_fact",
+      "input": "Why use a quadruped?",
+      "context": "A quadruped can traverse uneven indoor surfaces that are difficult for small wheeled guide robots.",
+      "expected": {
+        "reply_must_use_context": true,
+        "no_tool": true
+      }
+    },
+    {
+      "id": "unknown_fact",
+      "input": "Who designed this building?",
+      "context": "No information about the building's architect is available.",
+      "expected": {
+        "must_admit_unknown": true,
+        "no_tool": true
+      }
+    }
+  ]
+}

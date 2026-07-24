@@ -1,0 +1,444 @@
+{
+  "components": {
+    "schemas": {
+      "Action": {
+        "description": "The complete MVP command allowlist.\n\nThere is intentionally no raw velocity or arbitrary sport-command action.",
+        "enum": [
+          "stop",
+          "pause",
+          "reset_stop",
+          "stand_up",
+          "sit_down",
+          "greeting",
+          "go_to_waypoint",
+          "start_patrol",
+          "return_home"
+        ],
+        "title": "Action",
+        "type": "string"
+      },
+      "CommandEnvelope": {
+        "additionalProperties": false,
+        "description": "A validated command produced by an authenticated operator client.",
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/Action"
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "title": "Arguments",
+            "type": "object"
+          },
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "action"
+        ],
+        "title": "CommandEnvelope",
+        "type": "object"
+      },
+      "CommandResult": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/MissionState"
+          }
+        },
+        "required": [
+          "command_id",
+          "accepted",
+          "state",
+          "reason"
+        ],
+        "title": "CommandResult",
+        "type": "object"
+      },
+      "GatewayCapabilities": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter": {
+            "title": "Adapter",
+            "type": "string"
+          },
+          "allowed_waypoints": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Waypoints",
+            "type": "array"
+          },
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "developer_actions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "title": "Developer Actions",
+            "type": "array"
+          },
+          "heartbeat_period_ms": {
+            "title": "Heartbeat Period Ms",
+            "type": "integer"
+          },
+          "heartbeat_timeout_ms": {
+            "title": "Heartbeat Timeout Ms",
+            "type": "integer"
+          },
+          "motion_capable": {
+            "title": "Motion Capable",
+            "type": "boolean"
+          },
+          "operator_actions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "title": "Operator Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "api_version",
+          "adapter",
+          "motion_capable",
+          "operator_actions",
+          "developer_actions",
+          "allowed_waypoints",
+          "heartbeat_period_ms",
+          "heartbeat_timeout_ms"
+        ],
+        "title": "GatewayCapabilities",
+        "type": "object"
+      },
+      "GatewayHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter": {
+            "title": "Adapter",
+            "type": "string"
+          },
+          "motion_capable": {
+            "title": "Motion Capable",
+            "type": "boolean"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "adapter",
+          "motion_capable"
+        ],
+        "title": "GatewayHealth",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Heartbeat": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "Heartbeat",
+        "type": "object"
+      },
+      "MissionState": {
+        "enum": [
+          "stopped",
+          "idle",
+          "paused",
+          "navigating",
+          "patrolling",
+          "returning",
+          "failed"
+        ],
+        "title": "MissionState",
+        "type": "string"
+      },
+      "SupervisorSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "active_waypoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Waypoint"
+          },
+          "last_stop_reason": {
+            "title": "Last Stop Reason",
+            "type": "string"
+          },
+          "mission_state": {
+            "$ref": "#/components/schemas/MissionState"
+          },
+          "operator_heartbeat_fresh": {
+            "title": "Operator Heartbeat Fresh",
+            "type": "boolean"
+          },
+          "stop_latched": {
+            "title": "Stop Latched",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "stop_latched",
+          "operator_heartbeat_fresh",
+          "mission_state",
+          "active_waypoint",
+          "last_stop_reason"
+        ],
+        "title": "SupervisorSnapshot",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "PawGuide Edge Safety Gateway",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayHealth"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "operationId": "capabilities_v1_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayCapabilities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Capabilities"
+      }
+    },
+    "/v1/commands": {
+      "post": {
+        "operationId": "command_v1_commands_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandEnvelope"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Command"
+      }
+    },
+    "/v1/heartbeat": {
+      "post": {
+        "operationId": "heartbeat_v1_heartbeat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Heartbeat"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupervisorSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Heartbeat"
+      }
+    },
+    "/v1/state": {
+      "get": {
+        "operationId": "state_v1_state_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupervisorSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "State"
+      }
+    }
+  }
+}

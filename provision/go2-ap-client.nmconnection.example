@@ -1,0 +1,27 @@
+# Install as /etc/NetworkManager/system-connections/go2-ap-client.nmconnection,
+# replace all CHANGE_ME values, chmod 0600, then reload NetworkManager.
+#
+# This profile joins the robot's AP but never installs it as the default route.
+# The Pixel USB tether should own the edge computer's default route and DNS.
+[connection]
+id=go2-ap-client
+type=wifi
+interface-name=wlan0
+autoconnect=true
+
+[wifi]
+mode=infrastructure
+ssid=CHANGE_ME_GO2_SSID
+powersave=2
+
+[wifi-security]
+key-mgmt=wpa-psk
+psk=CHANGE_ME_GO2_WIFI_PASSWORD
+
+[ipv4]
+method=auto
+never-default=true
+ignore-auto-dns=true
+
+[ipv6]
+method=disabled

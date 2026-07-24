@@ -1,0 +1,655 @@
+diff --git a/dimos/agents/skills/pawguide_waypoint.py b/dimos/agents/skills/pawguide_waypoint.py
+new file mode 100644
+index 000000000..ad0328393
+--- /dev/null
++++ b/dimos/agents/skills/pawguide_waypoint.py
+@@ -0,0 +1,238 @@
++# Copyright 2025-2026 Dimensional Inc.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""Small, exact-match waypoint store for the PawGuide edge MVP."""
++
++from __future__ import annotations
++
++import json
++import math
++import os
++from pathlib import Path
++import re
++import tempfile
++import threading
++from typing import Any, TypedDict
++
++from reactivex.disposable import Disposable
++
++from dimos.agents.annotation import skill
++from dimos.agents.capabilities import CAP_MOVEMENT
++from dimos.core.core import rpc
++from dimos.core.module import Module, ModuleConfig
++from dimos.core.stream import In
++from dimos.msgs.geometry_msgs.PoseStamped import PoseStamped
++from dimos.navigation.navigation_spec import NavigationInterfaceSpec
++
++_WAYPOINT_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
++
++
++class StoredPose(TypedDict):
++    position: list[float]
++    orientation: list[float]
++
++
++class WaypointDocument(TypedDict):
++    version: int
++    waypoints: dict[str, StoredPose]
++
++
++class WaypointStore:
++    """Persist exact waypoint poses without a database or embedding model."""
++
++    def __init__(self, path: Path) -> None:
++        self._path = path
++        self._lock = threading.Lock()
++
++    @staticmethod
++    def validate_id(waypoint_id: str) -> None:
++        if not _WAYPOINT_ID.fullmatch(waypoint_id):
++            raise ValueError(
++                "waypoint_id must contain only lowercase letters, digits, "
++                "underscores or hyphens and be at most 64 characters"
++            )
++
++    @staticmethod
++    def _validate_vector(value: object, length: int, field: str) -> list[float]:
++        if not isinstance(value, list) or len(value) != length:
++            raise ValueError(f"invalid waypoint {field}")
++        result: list[float] = []
++        for item in value:
++            if isinstance(item, bool) or not isinstance(item, int | float):
++                raise ValueError(f"invalid waypoint {field}")
++            number = float(item)
++            if not math.isfinite(number):
++                raise ValueError(f"invalid waypoint {field}")
++            result.append(number)
++        return result
++
++    @classmethod
++    def _validate_document(cls, value: object) -> WaypointDocument:
++        if not isinstance(value, dict) or value.get("version") != 1:
++            raise ValueError("unsupported waypoint file")
++        raw_waypoints = value.get("waypoints")
++        if not isinstance(raw_waypoints, dict):
++            raise ValueError("invalid waypoint file")
++
++        waypoints: dict[str, StoredPose] = {}
++        for waypoint_id, raw_pose in raw_waypoints.items():
++            if not isinstance(waypoint_id, str):
++                raise ValueError("invalid waypoint ID")
++            cls.validate_id(waypoint_id)
++            if not isinstance(raw_pose, dict):
++                raise ValueError(f"invalid waypoint {waypoint_id}")
++            position = cls._validate_vector(raw_pose.get("position"), 3, "position")
++            orientation = cls._validate_vector(raw_pose.get("orientation"), 4, "orientation")
++            if math.sqrt(sum(component**2 for component in orientation)) < 1e-6:
++                raise ValueError("invalid waypoint orientation")
++            waypoints[waypoint_id] = {
++                "position": position,
++                "orientation": orientation,
++            }
++        return {"version": 1, "waypoints": waypoints}
++
++    def _load_unlocked(self) -> WaypointDocument:
++        if not self._path.exists():
++            return {"version": 1, "waypoints": {}}
++        try:
++            raw = json.loads(self._path.read_text(encoding="utf-8"))
++        except (OSError, json.JSONDecodeError) as exc:
++            raise RuntimeError(f"cannot read waypoint file {self._path}") from exc
++        try:
++            return self._validate_document(raw)
++        except ValueError as exc:
++            raise RuntimeError(f"invalid waypoint file {self._path}") from exc
++
++    def put(self, waypoint_id: str, pose: PoseStamped) -> None:
++        self.validate_id(waypoint_id)
++        stored_pose: StoredPose = {
++            "position": [pose.position.x, pose.position.y, pose.position.z],
++            "orientation": [
++                pose.orientation.x,
++                pose.orientation.y,
++                pose.orientation.z,
++                pose.orientation.w,
++            ],
++        }
++        with self._lock:
++            document = self._load_unlocked()
++            document["waypoints"][waypoint_id] = stored_pose
++            self._path.parent.mkdir(parents=True, exist_ok=True)
++            temporary_path: Path | None = None
++            try:
++                with tempfile.NamedTemporaryFile(
++                    mode="w",
++                    encoding="utf-8",
++                    dir=self._path.parent,
++                    prefix=f".{self._path.name}.",
++                    delete=False,
++                ) as temporary:
++                    temporary_path = Path(temporary.name)
++                    json.dump(document, temporary, indent=2, sort_keys=True)
++                    temporary.write("\n")
++                    temporary.flush()
++                    os.fsync(temporary.fileno())
++                temporary_path.chmod(0o600)
++                os.replace(temporary_path, self._path)
++            finally:
++                if temporary_path is not None:
++                    temporary_path.unlink(missing_ok=True)
++
++    def get(self, waypoint_id: str) -> StoredPose:
++        self.validate_id(waypoint_id)
++        with self._lock:
++            waypoint = self._load_unlocked()["waypoints"].get(waypoint_id)
++        if waypoint is None:
++            raise ValueError(f"unknown waypoint '{waypoint_id}'")
++        return waypoint
++
++
++class PawGuideWaypointConfig(ModuleConfig):
++    waypoint_path: Path = Path("/var/lib/pawguide/waypoints.json")
++    goal_frame_id: str = "map"
++
++
++class PawGuideWaypointSkill(Module):
++    """Exact named-waypoint navigation without visual-semantic memory."""
++
++    config: PawGuideWaypointConfig
++    odom: In[PoseStamped]
++    _navigation: NavigationInterfaceSpec
++    _latest_odom: PoseStamped | None = None
++    _skill_started: bool = False
++
++    def __init__(self, **kwargs: Any) -> None:
++        super().__init__(**kwargs)
++        self._store = WaypointStore(self.config.waypoint_path)
++
++    @rpc
++    def start(self) -> None:
++        super().start()
++        self.register_disposable(Disposable(self.odom.subscribe(self._on_odom)))
++        self._skill_started = True
++
++    @rpc
++    def stop(self) -> None:
++        self._skill_started = False
++        super().stop()
++
++    def _on_odom(self, odom: PoseStamped) -> None:
++        self._latest_odom = odom
++
++    @skill
++    def tag_location(self, waypoint_id: str) -> str:
++        """Save the robot's current pose under one exact waypoint ID.
++
++        This setup-only tool must be invoked directly by an operator, not by
++        the language model.
++
++        Args:
++            waypoint_id: Exact lowercase waypoint ID from the PawGuide allowlist.
++        """
++
++        if not self._skill_started:
++            raise RuntimeError("waypoint skill has not started")
++        if self._latest_odom is None:
++            raise RuntimeError("no odometry received")
++        self._store.put(waypoint_id, self._latest_odom)
++        return f"Tagged exact waypoint '{waypoint_id}'."
++
++    @skill(uses=[CAP_MOVEMENT])
++    def navigate_to_waypoint(self, waypoint_id: str) -> str:
++        """Navigate to one previously saved exact waypoint.
++
++        Args:
++            waypoint_id: Exact lowercase waypoint ID from the PawGuide allowlist.
++        """
++
++        if not self._skill_started:
++            raise RuntimeError("waypoint skill has not started")
++        stored = self._store.get(waypoint_id)
++        goal = PoseStamped(
++            position=stored["position"],
++            orientation=stored["orientation"],
++            frame_id=self.config.goal_frame_id,
++        )
++        if not self._navigation.set_goal(goal):
++            raise RuntimeError(f"navigator rejected waypoint '{waypoint_id}'")
++        return f"Started navigating to exact waypoint '{waypoint_id}'."
++
++    @skill
++    def stop_navigation(self) -> str:
++        """Cancel the active waypoint navigation immediately."""
++
++        if not self._skill_started:
++            raise RuntimeError("waypoint skill has not started")
++        self._navigation.cancel_goal()
++        return "Stopped waypoint navigation."
+diff --git a/dimos/core/global_config.py b/dimos/core/global_config.py
+index ec150c9bc..f22fceb76 100644
+--- a/dimos/core/global_config.py
++++ b/dimos/core/global_config.py
+@@ -48,6 +48,7 @@ class GlobalConfig(BaseSettings):
+     # Per-device AES-128 key for new Unitree firmware (G1 >=1.5.1, Go2 >=1.1.15, data2=3
+     # handshake). Fetch: unitree-fetch-aes-key --email YOU --sn <serial>
+     unitree_aes_128_key: str | None = None
++    unitree_webrtc_connection_method: Literal["local_sta", "local_ap"] = "local_sta"
+     xarm7_ip: str | None = None
+     xarm6_ip: str | None = None
+     can_port: str | None = None
+diff --git a/dimos/robot/all_blueprints.py b/dimos/robot/all_blueprints.py
+index 9194f48e9..768d9a19a 100644
+--- a/dimos/robot/all_blueprints.py
++++ b/dimos/robot/all_blueprints.py
+@@ -256,6 +256,7 @@ all_modules = {
+     "path-follower": "dimos.navigation.cmu_nav.modules.path_follower.path_follower.PathFollower",
+     "path-following-coordinator": "dimos.control.path_following_coordinator.PathFollowingCoordinator",
+     "patrolling-module": "dimos.navigation.patrolling.module.PatrollingModule",
++    "paw-guide-waypoint-skill": "dimos.agents.skills.pawguide_waypoint.PawGuideWaypointSkill",
+     "perceive-loop-skill": "dimos.perception.perceive_loop_skill.PerceiveLoopSkill",
+     "person-follow-skill-container": "dimos.agents.skills.person_follow.PersonFollowSkillContainer",
+     "person-tracker": "dimos.perception.detection.person_tracker.PersonTracker",
+diff --git a/dimos/robot/cli/dimos.py b/dimos/robot/cli/dimos.py
+index e21a29206..1850503ef 100644
+--- a/dimos/robot/cli/dimos.py
++++ b/dimos/robot/cli/dimos.py
+@@ -216,6 +216,13 @@ def _field_default(info: FieldInfo) -> Any:
+     if info.default is not PydanticUndefined:
+         return info.default
+     if info.default_factory is not None:
++        # Some module defaults depend on fields validated earlier in the same
++        # model (for example the Go2 connection pulls its IP from ``g``).
++        # There is no complete model instance while rendering CLI help, so the
++        # factory cannot be evaluated safely. Omitting the displayed default is
++        # preferable to making ``dimos run ... --help`` crash.
++        if info.default_factory_takes_validated_data:
++            return PydanticUndefined
+         return info.get_default(call_default_factory=True)
+     return PydanticUndefined
+ 
+diff --git a/dimos/robot/cli/test_dimos.py b/dimos/robot/cli/test_dimos.py
+index 0c1dd9c62..b6c83140d 100644
+--- a/dimos/robot/cli/test_dimos.py
++++ b/dimos/robot/cli/test_dimos.py
+@@ -167,6 +167,21 @@ def test_blueprint_arg_help_required():
+     ]
+ 
+ 
++def test_arg_help_skips_data_dependent_default_factory():
++    class DataDependentConfig(ModuleConfig):
++        source: str = "configured"
++        inherited: str = Field(default_factory=lambda data: data["source"])
++
++    class DataDependentModule(Module):
++        config: DataDependentConfig
++
++    blueprint = DataDependentModule.blueprint()
++    output = arg_help(blueprint.config(), blueprint)
++
++    assert "datadependentmodule.inherited: str" in output
++    assert "datadependentmodule.inherited: str (default:" not in output
++
++
+ def test_list_blueprints_groups_builtin_and_external(monkeypatch: pytest.MonkeyPatch) -> None:
+     monkeypatch.setattr(
+         external,
+diff --git a/dimos/robot/unitree/connection.py b/dimos/robot/unitree/connection.py
+index 761dff994..82510f7e8 100644
+--- a/dimos/robot/unitree/connection.py
++++ b/dimos/robot/unitree/connection.py
+@@ -105,6 +105,7 @@ class UnitreeWebRTCConnection(Resource):
+         mode: str = "ai",
+         aes_128_key: str | None = None,
+         velocity_api: bool = False,
++        connection_method: WebRTCConnectionMethod = WebRTCConnectionMethod.LocalSTA,
+     ) -> None:
+         self.ip = ip
+         self.mode = mode
+@@ -113,9 +114,7 @@ class UnitreeWebRTCConnection(Resource):
+         self._velocity_api = velocity_api
+         self._move_ids = SequentialIds()
+         # Per-device AES-128 key for new Unitree firmware (data2=3 handshake); omitted when unset.
+-        self.conn = LegionConnection(
+-            WebRTCConnectionMethod.LocalSTA, ip=self.ip, aes_128_key=aes_128_key
+-        )
++        self.conn = LegionConnection(connection_method, ip=self.ip, aes_128_key=aes_128_key)
+         self.connect()
+ 
+     def connect(self) -> None:
+diff --git a/dimos/robot/unitree/go2/connection.py b/dimos/robot/unitree/go2/connection.py
+index 46149b2c5..7c88c892b 100644
+--- a/dimos/robot/unitree/go2/connection.py
++++ b/dimos/robot/unitree/go2/connection.py
+@@ -18,13 +18,14 @@ from importlib import resources
+ import sys
+ from threading import Thread
+ import time
+-from typing import Any, Protocol
++from typing import Any, Literal, Protocol
+ 
+ from pydantic import Field
+ from reactivex import empty
+ from reactivex.disposable import Disposable
+ from reactivex.observable import Observable
+ import rerun.blueprint as rrb
++from unitree_webrtc_connect.constants import WebRTCConnectionMethod
+ 
+ from dimos.agents.annotation import skill
+ from dimos.constants import DEFAULT_THREAD_JOIN_TIMEOUT
+@@ -72,6 +73,9 @@ class ConnectionConfig(ModuleConfig):
+     motion_mode: str | None = None
+     # Per-device AES-128 key (Go2 fw >=1.1.15); defaults from GlobalConfig.
+     aes_128_key: str | None = Field(default_factory=lambda m: m["g"].unitree_aes_128_key)
++    webrtc_connection_method: Literal["local_sta", "local_ap"] = Field(
++        default_factory=lambda m: m["g"].unitree_webrtc_connection_method
++    )
+     # TF parent frame of the internal odometry (odom_frame_id -> base_link).
+     # Rename (e.g. "go2_odom") when another odom source owns the tree root
+     odom_frame_id: str = "world"
+@@ -136,6 +140,7 @@ def make_connection(
+     cfg: GlobalConfig,
+     aes_128_key: str | None = None,
+     velocity_api: bool = False,
++    webrtc_connection_method: Literal["local_sta", "local_ap"] = "local_sta",
+ ) -> Go2ConnectionProtocol:
+     connection_type = cfg.unitree_connection_type.lower()
+ 
+@@ -152,10 +157,15 @@ def make_connection(
+         return DimSimConnection(cfg)
+     elif connection_type == "webrtc":
+         assert ip is not None, "IP address must be provided"
++        connection_methods = {
++            "local_sta": WebRTCConnectionMethod.LocalSTA,
++            "local_ap": WebRTCConnectionMethod.LocalAP,
++        }
+         return UnitreeWebRTCConnection(
+             ip,
+             aes_128_key=aes_128_key,
+             velocity_api=velocity_api,
++            connection_method=connection_methods[webrtc_connection_method],
+         )
+     else:
+         raise ValueError(f"Unknown simulator {cfg.simulation!r}. Choose from: mujoco, dimsim")
+@@ -297,6 +307,7 @@ class GO2Connection(Module, Camera, Pointcloud):
+             self.config.g,
+             aes_128_key=self.config.aes_128_key,
+             velocity_api=self.config.velocity_api,
++            webrtc_connection_method=self.config.webrtc_connection_method,
+         )
+ 
+         if hasattr(self.connection, "camera_info_static"):
+@@ -459,6 +470,17 @@ class GO2Connection(Module, Camera, Pointcloud):
+         """Zero the base immediately (webrtc deadman stop)."""
+         self.connection.stop_movement()
+ 
++    @skill
++    def emergency_stop(self) -> str:
++        """Immediately command zero base motion at the local Go2 connection.
++
++        This is the lowest-latency software stop exposed through MCP. Callers
++        should also stop any active navigation, patrol, following, or
++        exploration skill so it cannot publish a new movement command.
++        """
++        self.connection.stop_movement()
++        return "Emergency stop command sent"
++
+     def _on_lowstate(self, msg: LowStateMsg) -> None:
+         """Cache the latest low-level state push (battery, IMU, motors, etc.)."""
+         self._latest_lowstate = msg
+diff --git a/dimos/robot/unitree/go2/test_connection.py b/dimos/robot/unitree/go2/test_connection.py
+index 533254fe2..e63376970 100644
+--- a/dimos/robot/unitree/go2/test_connection.py
++++ b/dimos/robot/unitree/go2/test_connection.py
+@@ -22,6 +22,7 @@ from types import SimpleNamespace
+ from unittest.mock import MagicMock
+ 
+ import pytest
++from unitree_webrtc_connect.constants import WebRTCConnectionMethod
+ 
+ from dimos.core.global_config import GlobalConfig
+ from dimos.msgs.geometry_msgs.PoseStamped import PoseStamped
+@@ -46,6 +47,22 @@ def test_make_connection_webrtc_forwards_aes_128_key(stub_webrtc: MagicMock) ->
+         "192.168.123.161",
+         aes_128_key="cafe" * 8,
+         velocity_api=False,
++        connection_method=WebRTCConnectionMethod.LocalSTA,
++    )
++
++
++def test_make_connection_webrtc_forwards_local_ap(stub_webrtc: MagicMock) -> None:
++    cfg = SimpleNamespace(unitree_connection_type="webrtc")
++    go2_conn.make_connection(
++        "192.168.12.1",
++        cfg,
++        webrtc_connection_method="local_ap",
++    )
++    stub_webrtc.assert_called_once_with(
++        "192.168.12.1",
++        aes_128_key=None,
++        velocity_api=False,
++        connection_method=WebRTCConnectionMethod.LocalAP,
+     )
+ 
+ 
+@@ -55,6 +72,11 @@ def test_connection_config_aes_key_defaults_from_global_config() -> None:
+     assert ConnectionConfig(g=g).aes_128_key == "dd" * 16
+ 
+ 
++def test_connection_config_method_defaults_from_global_config() -> None:
++    g = GlobalConfig(unitree_webrtc_connection_method="local_ap")
++    assert ConnectionConfig(g=g).webrtc_connection_method == "local_ap"
++
++
+ def test_odom_to_tf_unprefixed_by_default() -> None:
+     odom = PoseStamped(ts=1.0, frame_id="world")
+     base, camera_link, camera_optical = GO2Connection._odom_to_tf(odom)
+@@ -80,3 +102,14 @@ def test_odom_to_tf_prefixed() -> None:
+         "robot0/camera_link",
+         "robot0/camera_optical",
+     )
++
++
++def test_emergency_stop_skill_zeroes_the_connection() -> None:
++    module = object.__new__(GO2Connection)
++    module.connection = MagicMock()
++
++    result = module.emergency_stop()
++
++    assert result == "Emergency stop command sent"
++    module.connection.stop_movement.assert_called_once_with()
++    assert GO2Connection.emergency_stop.__skill__ is True
+diff --git a/dimos/robot/unitree/go2/test_pawguide_waypoint.py b/dimos/robot/unitree/go2/test_pawguide_waypoint.py
+new file mode 100644
+index 000000000..bbd151d44
+--- /dev/null
++++ b/dimos/robot/unitree/go2/test_pawguide_waypoint.py
+@@ -0,0 +1,115 @@
++# Copyright 2025-2026 Dimensional Inc.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++
++from dimos.agents.skills.pawguide_waypoint import (
++    PawGuideWaypointSkill,
++    WaypointStore,
++)
++from dimos.msgs.geometry_msgs.PoseStamped import PoseStamped
++
++
++class FakeNavigation:
++    def __init__(self, *, accept_goal: bool = True) -> None:
++        self.accept_goal = accept_goal
++        self.goals: list[PoseStamped] = []
++        self.cancelled = False
++
++    def set_goal(self, goal: PoseStamped) -> bool:
++        self.goals.append(goal)
++        return self.accept_goal
++
++    def cancel_goal(self) -> bool:
++        self.cancelled = True
++        return True
++
++
++def make_skill(path: Path, navigation: FakeNavigation) -> PawGuideWaypointSkill:
++    instance = object.__new__(PawGuideWaypointSkill)
++    instance.config = SimpleNamespace(  # type: ignore[assignment]
++        waypoint_path=path,
++        goal_frame_id="map",
++    )
++    instance._store = WaypointStore(path)
++    instance._skill_started = True
++    instance._latest_odom = PoseStamped(
++        position=[1.0, 2.0, 0.1],
++        orientation=[0.0, 0.0, 0.5, 0.8660254],
++        frame_id="odom",
++    )
++    instance._navigation = navigation
++    return instance
++
++
++def test_tag_and_navigate_exact_waypoint(tmp_path: Path) -> None:
++    navigation = FakeNavigation()
++    skill = make_skill(tmp_path / "waypoints.json", navigation)
++
++    assert "demo_a" in skill.tag_location("demo_a")
++    assert "demo_a" in skill.navigate_to_waypoint("demo_a")
++
++    assert len(navigation.goals) == 1
++    goal = navigation.goals[0]
++    assert goal.frame_id == "map"
++    assert goal.position.x == 1.0
++    assert goal.position.y == 2.0
++    assert goal.orientation.w == pytest.approx(0.8660254)
++    assert (tmp_path / "waypoints.json").stat().st_mode & 0o777 == 0o600
++
++
++@pytest.mark.parametrize(
++    "waypoint_id",
++    ["", "Demo", "../home", "with space", "x" * 65],
++)
++def test_rejects_unsafe_waypoint_ids(tmp_path: Path, waypoint_id: str) -> None:
++    skill = make_skill(tmp_path / "waypoints.json", FakeNavigation())
++
++    with pytest.raises(ValueError, match="waypoint_id"):
++        skill.tag_location(waypoint_id)
++
++
++def test_unknown_waypoint_fails_closed(tmp_path: Path) -> None:
++    skill = make_skill(tmp_path / "waypoints.json", FakeNavigation())
++
++    with pytest.raises(ValueError, match="unknown waypoint"):
++        skill.navigate_to_waypoint("missing")
++
++
++def test_corrupt_waypoint_file_fails_closed(tmp_path: Path) -> None:
++    path = tmp_path / "waypoints.json"
++    path.write_text('{"version": 1, "waypoints": {"home": {"position": []}}}')
++    skill = make_skill(path, FakeNavigation())
++
++    with pytest.raises(RuntimeError, match="invalid waypoint file"):
++        skill.navigate_to_waypoint("home")
++
++
++def test_rejected_goal_is_reported(tmp_path: Path) -> None:
++    skill = make_skill(tmp_path / "waypoints.json", FakeNavigation(accept_goal=False))
++    skill.tag_location("home")
++
++    with pytest.raises(RuntimeError, match="navigator rejected"):
++        skill.navigate_to_waypoint("home")
++
++
++def test_stop_navigation_cancels_goal(tmp_path: Path) -> None:
++    navigation = FakeNavigation()
++    skill = make_skill(tmp_path / "waypoints.json", navigation)
++
++    assert "Stopped" in skill.stop_navigation()
++    assert navigation.cancelled is True
+diff --git a/dimos/robot/unitree/test_connection.py b/dimos/robot/unitree/test_connection.py
+index 8180f2d70..d58834327 100644
+--- a/dimos/robot/unitree/test_connection.py
++++ b/dimos/robot/unitree/test_connection.py
+@@ -23,7 +23,12 @@ from typing import Any
+ from unittest.mock import ANY, AsyncMock, MagicMock, call
+ 
+ import pytest
+-from unitree_webrtc_connect.constants import DATA_CHANNEL_TYPE, RTC_TOPIC, SPORT_CMD
++from unitree_webrtc_connect.constants import (
++    DATA_CHANNEL_TYPE,
++    RTC_TOPIC,
++    SPORT_CMD,
++    WebRTCConnectionMethod,
++)
+ 
+ from dimos.constants import DEFAULT_THREAD_JOIN_TIMEOUT
+ from dimos.core.global_config import GlobalConfig
+@@ -143,6 +148,19 @@ def _aes_kwarg(legion: MagicMock) -> Any:
+     return legion.call_args.kwargs.get("aes_128_key")
+ 
+ 
++def test_local_sta_is_default_connection_method(stub_legion: MagicMock) -> None:
++    UnitreeWebRTCConnection(ip="192.168.123.161")
++    assert stub_legion.call_args.args[0] is WebRTCConnectionMethod.LocalSTA
++
++
++def test_local_ap_connection_method_is_forwarded(stub_legion: MagicMock) -> None:
++    UnitreeWebRTCConnection(
++        ip="192.168.12.1",
++        connection_method=WebRTCConnectionMethod.LocalAP,
++    )
++    assert stub_legion.call_args.args[0] is WebRTCConnectionMethod.LocalAP
++
++
+ def test_no_key_forwards_falsy(stub_legion: MagicMock) -> None:
+     """No key → a falsy value reaches the driver, which treats it as no key."""
+     UnitreeWebRTCConnection(ip="192.168.123.161")
+diff --git a/pyproject.toml b/pyproject.toml
+index 0eeb509aa..4dd4b479f 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -254,6 +254,14 @@ unitree = [
+     "unitree-webrtc-connect>=2.1.2",
+ ]
+ 
++# Minimal dependency set for the PawGuide edge runtime. The full `unitree` extra
++# pulls agent and visual-semantic model stacks that are not used by the exact
++# waypoint MVP.
++pawguide-edge = [
++    "dimos[web,mapping]",
++    "unitree-webrtc-connect>=2.1.2",
++]
++
+ unitree-dds = [
+     "dimos[unitree]",
+     "unitree-sdk2py-dimos>=1.0.2",

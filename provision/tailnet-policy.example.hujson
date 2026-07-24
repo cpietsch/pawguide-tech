@@ -1,0 +1,30 @@
+{
+  "tagOwners": {
+    "tag:pawguide-dev": ["autogroup:admin"],
+    "tag:pawguide-edge": ["autogroup:admin"],
+  },
+
+  "grants": [
+    {
+      // Hetzner can call the X5 application bridge and administer it.
+      "src": ["tag:pawguide-dev"],
+      "dst": ["tag:pawguide-edge"],
+      "ip": ["tcp:22", "tcp:8765"],
+    },
+    {
+      // Tailnet administrators can recover either PawGuide node.
+      "src": ["autogroup:admin"],
+      "dst": ["tag:pawguide-dev", "tag:pawguide-edge"],
+      "ip": ["tcp:22"],
+    },
+  ],
+
+  "ssh": [
+    {
+      "action": "check",
+      "src": ["autogroup:admin"],
+      "dst": ["tag:pawguide-dev", "tag:pawguide-edge"],
+      "users": ["autogroup:nonroot"],
+    },
+  ],
+}

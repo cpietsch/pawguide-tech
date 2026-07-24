@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pawguide.local/contracts/local-agent-output.schema.json",
+  "title": "PawGuide local agent output",
+  "description": "Strict normalized output accepted from the Pixel inference adapter. Native LiteRT-LM tool calls or prompted JSON must map to this shape. STOP, arming, heartbeat and stop reset bypass inference.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "speech"],
+      "properties": {
+        "kind": {
+          "const": "reply"
+        },
+        "speech": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "action", "arguments", "speech"],
+      "properties": {
+        "kind": {
+          "const": "command"
+        },
+        "action": {
+          "enum": [
+            "pause",
+            "go_to_waypoint",
+            "start_patrol",
+            "return_home"
+          ]
+        },
+        "arguments": {
+          "type": "object"
+        },
+        "speech": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "go_to_waypoint"
+              }
+            },
+            "required": ["action"]
+          },
+          "then": {
+            "properties": {
+              "arguments": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["waypoint_id"],
+                "properties": {
+                  "waypoint_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "arguments": {
+                "type": "object",
+                "additionalProperties": false,
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

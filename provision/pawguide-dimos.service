@@ -1,0 +1,42 @@
+[Unit]
+Description=PawGuide local DimOS navigation stack
+After=network-online.target NetworkManager.service
+Wants=network-online.target
+ConditionPathExists=/etc/pawguide/unitree-aes.token
+
+[Service]
+Type=simple
+User=pawguide
+Group=pawguide
+WorkingDirectory=/var/lib/pawguide
+Environment=HOME=/var/lib/pawguide
+Environment=XDG_RUNTIME_DIR=/run/pawguide
+RuntimeDirectory=pawguide
+RuntimeDirectoryMode=0700
+LoadCredential=unitree_aes:/etc/pawguide/unitree-aes.token
+ExecStart=/opt/pawguide/bin/run-dimos.sh
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=30
+KillMode=mixed
+NoNewPrivileges=true
+CapabilityBoundingSet=
+LockPersonality=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+UMask=0077
+ReadWritePaths=/var/lib/pawguide /run/pawguide
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

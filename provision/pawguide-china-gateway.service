@@ -1,0 +1,36 @@
+[Unit]
+Description=PawGuide China development gateway
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User=pawguide
+Group=pawguide
+WorkingDirectory=/opt/pawguide/current
+EnvironmentFile=/etc/pawguide/pawguide.env
+ExecStart=/opt/pawguide/current/.venv/bin/pawguide-gateway
+Restart=always
+RestartSec=1
+NoNewPrivileges=true
+CapabilityBoundingSet=
+LockPersonality=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+UMask=0077
+ReadWritePaths=/var/lib/pawguide
+
+[Install]
+WantedBy=multi-user.target

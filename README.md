@@ -86,6 +86,7 @@ The future S100 artifact remains reproducible:
 
 ## Start here
 
+- [MacBook Codex provisioning handoff](docs/MACBOOK_CODEX_HANDOFF.md)
 - [First motion test](docs/FIRST_MOTION_TEST.md)
 - [X5 installation and deployment](docs/MVP_DEPLOYMENT.md)
 - [X5 harness requirements](docs/MOUNTING_REQUIREMENTS.md)

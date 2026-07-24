@@ -14,6 +14,22 @@ is:
 manual console -> X5 safety gateway -> DimOS MCP -> Go2 WebRTC
 ```
 
+## Current status
+
+This handoff reflects the state on 2026-07-24:
+
+- The 64 GB microSD has already been flashed with the official RDK X5 Ubuntu
+  22.04 server image. Do not reflash it unless first-boot diagnostics establish
+  that the image is unusable.
+- The X5 has not yet been provisioned or verified on Tailscale.
+- The tested PawGuide bundle is ready on the Hetzner development server and
+  the China artifact mirror.
+- Mobile Codex remote control on Hetzner is stopped. Do not re-enable it for
+  this workflow.
+- On the Mac, use the current ChatGPT desktop app in **Codex** mode and connect
+  directly to the SSH host alias `hetzner`. Do not tunnel Codex through another
+  terminal session or through the mobile remote-control relay.
+
 ## Fixed decisions
 
 - Physical target: RDK X5, 8 GB RAM, 64 GB microSD.
@@ -38,6 +54,30 @@ Private source repository:
 https://github.com/cpietsch/pawguide
 ```
 
+The current handoff lives on:
+
+```text
+agent/macbook-codex-handoff
+```
+
+If the repository is not already present on the Mac:
+
+```bash
+gh repo clone cpietsch/pawguide ~/Code/pawguide
+cd ~/Code/pawguide
+git fetch origin
+git switch --track origin/agent/macbook-codex-handoff
+```
+
+If the branch already exists locally:
+
+```bash
+cd ~/Code/pawguide
+git fetch origin
+git switch agent/macbook-codex-handoff
+git pull --ff-only
+```
+
 On the user's MacBook, the Hetzner development server is already configured in
 `~/.ssh/config` under the host alias `hetzner`. Use that alias instead of
 reconstructing its address, port or key settings:
@@ -49,6 +89,25 @@ scp hetzner:/root/pawguide/docs/MACBOOK_CODEX_HANDOFF.md .
 
 Do not modify the Mac's working SSH configuration unless the alias fails and
 the user explicitly asks for it to be repaired.
+
+In the current ChatGPT desktop app:
+
+1. Select **Codex** from the top-left product menu.
+2. Add or select the SSH connection named `hetzner`.
+3. Open `/root/pawguide`.
+4. Start a new session with:
+
+   ```text
+   Read docs/MACBOOK_CODEX_HANDOFF.md completely. Execute Phases 1-4.
+   Resolve and report every readiness failure. Stop before Phase 5 and ask me
+   to confirm the physical support, spotter, and clear area before enabling
+   real motion.
+   ```
+
+The ChatGPT desktop SSH connection is only the development/control surface for
+Hetzner. During X5 first boot, the Mac also needs a separate direct LAN SSH
+session to the X5. Once the X5 is on Tailscale, Hetzner may connect directly to
+it; the Mac must not remain an always-on tunnel or runtime dependency.
 
 The tested artifact corresponds to initial commit:
 
@@ -149,30 +208,43 @@ Do not inspect or include the contents of `/etc/pawguide/*.token` in logs.
 
 ## Phase 1: establish Mac-to-X5 access
 
-First determine, without changing disks or network configuration:
+The microSD is already flashed. Insert it into the unpowered X5, connect the
+fan and stable 5 V/5 A supply, connect the X5 Ethernet port directly to the
+Mac, and then power on the X5. Do not connect the Go2 yet.
 
-```bash
-uname -m
-sw_vers
-ls -lh pawguide-x5-mvp.tar.gz
+Configure only the Mac's dedicated Ethernet interface with:
+
+```text
+IPv4 address: 192.168.127.100
+Subnet mask:  255.255.255.0
+Router:       blank
+DNS:          blank
 ```
 
-Ask the user only for information that cannot be discovered safely:
+Keep the Mac's normal Wi-Fi internet connection active. Test the documented X5
+wired address:
 
-- whether the RDK OS image is already flashed;
-- the current X5 SSH username and reachable IP or hostname;
-- the Go2 AP SSID and password when the network script prompts;
-- the Tailscale auth key when joining the X5.
+```bash
+ping -c 3 192.168.127.10
+ssh sunrise@192.168.127.10
+```
 
-If the microSD is not flashed, use the current RDK X5 Server image, RDK OS
-3.5.0 or newer based on Ubuntu 22.04. Disk imaging is destructive: identify the
-exact removable microSD device and obtain explicit user confirmation before
-running any imaging command. Never infer a `/dev/diskN` target.
+The factory login is `sunrise` / `sunrise`. Change the password immediately
+when prompted or by running `passwd`; never store the replacement in the
+repository or handoff.
 
-Give the X5 initial internet through Ethernet or Pixel USB tethering. Do not
-use Go2 Wi-Fi as the internet/default route.
+If `192.168.127.10` is not reachable:
 
-Once SSH works, inspect the X5:
+1. Confirm power, fan operation, Ethernet link LEDs and the Mac interface
+   address.
+2. Inspect `arp -an` and the Mac network settings without changing another
+   interface.
+3. Use the X5 Micro-USB debug serial interface as the recovery path:
+   CH340, 921600 baud, 8 data bits, no parity, 1 stop bit, no flow control.
+4. Collect boot output before considering a reflash. Never infer or overwrite a
+   `/dev/diskN` target.
+
+After first login, determine without changing disks:
 
 ```bash
 uname -m
@@ -184,8 +256,21 @@ ip -br link
 ip -4 route
 ```
 
-Expected architecture is `aarch64`, OS base is Ubuntu `22.04`, and usable RAM
-is approximately 8 GB.
+Ask the user only for information that cannot be discovered safely:
+
+- the Go2 AP SSID and password when the network script prompts;
+- the Tailscale auth key when joining the X5.
+
+Give the X5 initial internet through Ethernet or Pixel USB tethering. Do not
+use Go2 Wi-Fi as the internet/default route.
+
+Before continuing, confirm:
+
+- architecture is `aarch64`;
+- OS base is Ubuntu `22.04`;
+- usable RAM is approximately 8 GB;
+- the root filesystem uses the microSD capacity;
+- the X5 has an internet route independent of the future Go2 Wi-Fi route.
 
 ## Phase 2: transfer and verify on the X5
 
@@ -236,6 +321,19 @@ sudo bash provision/install-x5-bridge.sh
 sudo bash provision/install-dimos-x5.sh
 sudo bash provision/install-robot-credential.sh
 ```
+
+Record, but do not publish, the result of:
+
+```bash
+tailscale ip -4
+tailscale status
+```
+
+Report the X5 hostname `pawguide-x5` and its Tailscale IP to the existing
+Hetzner Codex session. Seeing the node in Tailscale is not sufficient proof of
+SSH access. Do not copy a private key from Hetzner or the Mac. The Hetzner
+session will provision a dedicated public key and verify the ACL/SSH path
+before taking over remote development.
 
 These installers must leave the physical DimOS service disabled and the
 gateway in mock mode. Verify without reading secret files:

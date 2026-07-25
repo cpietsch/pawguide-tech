@@ -1,0 +1,22 @@
+{
+  "artifact_dir": "artifacts/soak/commissioning-retry-20260726",
+  "completed_legs": 2,
+  "final_state": {
+    "active_waypoint": null,
+    "last_stop_reason": "operator_stop",
+    "mission_state": "stopped",
+    "operator_heartbeat_fresh": false,
+    "stop_latched": true
+  },
+  "finished_at": "2026-07-25T16:31:15.173820+00:00",
+  "gateway_url": "http://100.72.30.53:8876",
+  "legs": [
+    "artifacts/soak/commissioning-retry-20260726/leg-0001-to-demo_a.json",
+    "artifacts/soak/commissioning-retry-20260726/leg-0002-to-home.json"
+  ],
+  "passed": true,
+  "passed_legs": 2,
+  "requested_legs": 2,
+  "started_at": "2026-07-25T16:28:27.074849+00:00",
+  "visualization_url": "http://100.102.208.90:7780"
+}

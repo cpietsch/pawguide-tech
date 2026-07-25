@@ -2,7 +2,22 @@
   "arrival_tolerance_m": 0.2,
   "heartbeat_stop_deadline_s": 3.0,
   "max_gateway_p95_ms": 750,
+  "minimum_path_detour_ratio": 1.25,
+  "minimum_path_lateral_m": 0.5,
   "minimum_displacement_m": 0.5,
+  "obstacle": {
+    "center": [
+      -0.451889732,
+      1.238925028
+    ],
+    "half_extents": [
+      0.08,
+      0.35
+    ],
+    "planning_grid_tolerance_m": 0.05,
+    "robot_radius_m": 0.3,
+    "yaw": 0.412813891
+  },
   "target_pose": [
     0.09559794429598462,
     1.4787140953595757,

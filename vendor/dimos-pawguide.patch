@@ -713,3 +713,258 @@ diff --git a/dimos/simulation/mujoco/mujoco_process.py b/dimos/simulation/mujoco
 +                    controller.get_command(),
 +                    drive_dt,
 +                )
+diff --git a/dimos/simulation/mujoco/model.py b/dimos/simulation/mujoco/model.py
+--- a/dimos/simulation/mujoco/model.py
++++ b/dimos/simulation/mujoco/model.py
+@@ -18,0 +19 @@
++import os
+@@ -116,0 +118,2 @@
++    if os.getenv("DIMOS_MUJOCO_ACCEPTANCE_OBSTACLE") == "1":
++        _add_acceptance_obstacle(root)
+@@ -118,0 +122,24 @@
++
++
++def _add_acceptance_obstacle(root: ET.Element) -> None:
++    """Place a visible box across the commissioned home-to-demo route."""
++    worldbody = root.find("worldbody")
++    if worldbody is None:
++        worldbody = ET.SubElement(root, "worldbody")
++    body = ET.SubElement(
++        worldbody,
++        "body",
++        name="pawguide_detour_wall",
++        pos="-0.451889732 1.238925028 0.50",
++        euler="0 0 0.412813891",
++    )
++    ET.SubElement(
++        body,
++        "geom",
++        name="pawguide_detour_wall_geom",
++        type="box",
++        size="0.08 0.35 0.50",
++        rgba="0.95 0.25 0.10 1",
++        contype="1",
++        conaffinity="1",
++    )
+diff --git a/dimos/navigation/replanning_a_star/global_planner.py b/dimos/navigation/replanning_a_star/global_planner.py
+--- a/dimos/navigation/replanning_a_star/global_planner.py
++++ b/dimos/navigation/replanning_a_star/global_planner.py
+@@ -15,0 +16 @@
++import os
+@@ -44,0 +46,86 @@
++_ACCEPTANCE_OBSTACLE_CENTER = (-0.451889732, 1.238925028)
++_ACCEPTANCE_OBSTACLE_YAW = 0.412813891
++_ACCEPTANCE_OBSTACLE_HALF_EXTENTS = (0.08, 0.35)
++
++
++def add_acceptance_obstacle(costmap: OccupancyGrid) -> OccupancyGrid:
++    """Rasterize the deterministic MuJoCo wall into the simulation costmap."""
++    result = OccupancyGrid(
++        grid=costmap.grid.copy(),
++        resolution=costmap.resolution,
++        origin=costmap.origin,
++        frame_id=costmap.frame_id,
++        ts=costmap.ts,
++    )
++    center_x, center_y = _ACCEPTANCE_OBSTACLE_CENTER
++    cosine, sine = math.cos(_ACCEPTANCE_OBSTACLE_YAW), math.sin(
++        _ACCEPTANCE_OBSTACLE_YAW
++    )
++    half_x, half_y = _ACCEPTANCE_OBSTACLE_HALF_EXTENTS
++    origin_x, origin_y = costmap.origin.position.x, costmap.origin.position.y
++
++    world_half_x = abs(cosine) * half_x + abs(sine) * half_y
++    world_half_y = abs(sine) * half_x + abs(cosine) * half_y
++    column_start = max(
++        0, math.floor((center_x - world_half_x - origin_x) / costmap.resolution)
++    )
++    column_stop = min(
++        result.width,
++        math.ceil((center_x + world_half_x - origin_x) / costmap.resolution) + 1,
++    )
++    row_start = max(
++        0, math.floor((center_y - world_half_y - origin_y) / costmap.resolution)
++    )
++    row_stop = min(
++        result.height,
++        math.ceil((center_y + world_half_y - origin_y) / costmap.resolution) + 1,
++    )
++    if column_start >= column_stop or row_start >= row_stop:
++        return result
++
++    rows, columns = np.indices(
++        (row_stop - row_start, column_stop - column_start)
++    )
++    rows += row_start
++    columns += column_start
++    world_x = origin_x + (columns + 0.5) * costmap.resolution
++    world_y = origin_y + (rows + 0.5) * costmap.resolution
++    dx, dy = world_x - center_x, world_y - center_y
++    local_x = cosine * dx + sine * dy
++    local_y = -sine * dx + cosine * dy
++    wall = (np.abs(local_x) <= half_x) & (np.abs(local_y) <= half_y)
++    region = result.grid[row_start:row_stop, column_start:column_stop]
++    region[wall] = CostValues.OCCUPIED
++    return result
++
++
++def path_is_collision_free(path: Path, costmap: OccupancyGrid) -> bool:
++    """Check every grid cell crossed by a path, including between poses."""
++    if not path.poses or costmap.grid.size == 0:
++        return False
++
++    height, width = costmap.grid.shape
++    sample_spacing = max(costmap.resolution / 2, 0.001)
++
++    for start, end in zip(path.poses, path.poses[1:], strict=False):
++        dx = end.position.x - start.position.x
++        dy = end.position.y - start.position.y
++        samples = max(1, math.ceil(math.hypot(dx, dy) / sample_spacing))
++
++        for index in range(samples + 1):
++            fraction = index / samples
++            point = Vector3(
++                start.position.x + dx * fraction,
++                start.position.y + dy * fraction,
++                0.0,
++            )
++            cell = costmap.world_to_grid(point)
++            x, y = int(math.floor(cell.x)), int(math.floor(cell.y))
++            if x < 0 or x >= width or y < 0 or y >= height:
++                return False
++            value = int(costmap.grid[y, x])
++            if value == CostValues.UNKNOWN or value >= CostValues.OCCUPIED:
++                return False
++
++    return True
++
+@@ -66,0 +154 @@
++    _last_planning_costmap: OccupancyGrid | None
+@@ -90 +178,2 @@
+-            stuck_threshold = 1.0
++            stuck_threshold = 0.1
++            self._max_path_deviation = 0.45
+@@ -98,0 +188 @@
++        self._last_planning_costmap = None
+@@ -130,0 +221,5 @@
++        if (
++            self._global_config.simulation
++            and os.getenv("DIMOS_MUJOCO_ACCEPTANCE_OBSTACLE") == "1"
++        ):
++            msg = add_acceptance_obstacle(msg)
+@@ -343,0 +439,6 @@
++        if self._last_planning_costmap is None or not path_is_collision_free(
++            resampled_path, self._last_planning_costmap
++        ):
++            logger.warning("Smoothed path intersects the planning costmap; using raw A* path.")
++            path.poses[-1].orientation = current_goal.orientation
++            resampled_path = path
+@@ -351 +452,6 @@
+-        sizes_to_try: list[float] = [1.1]
++        # The Go2 may rotate while following the path. Inflate to its full
++        # rotation diameter, not merely its narrow body width.
++        sizes_to_try: list[float] = [
++            self._global_config.robot_rotation_diameter
++            / self._global_config.robot_width
++        ]
+@@ -352,0 +459 @@
++        self._last_planning_costmap = None
+@@ -360,0 +468 @@
++                self._last_planning_costmap = costmap
+diff --git a/dimos/navigation/replanning_a_star/local_planner.py b/dimos/navigation/replanning_a_star/local_planner.py
+--- a/dimos/navigation/replanning_a_star/local_planner.py
++++ b/dimos/navigation/replanning_a_star/local_planner.py
+@@ -89,0 +90,2 @@
++        if global_config.simulation:
++            speed = min(speed, 0.3)
+@@ -117 +119,2 @@
+-            self._path_distancer = PathDistancer(self._path)
++            lookahead = 0.1 if self._global_config.simulation else 0.5
++            self._path_distancer = PathDistancer(self._path, lookahead_dist=lookahead)
+diff --git a/dimos/navigation/replanning_a_star/controllers.py b/dimos/navigation/replanning_a_star/controllers.py
+--- a/dimos/navigation/replanning_a_star/controllers.py
++++ b/dimos/navigation/replanning_a_star/controllers.py
+@@ -52,0 +53,3 @@
++        if global_config.simulation:
++            # Avoid translating through sharp corners in the discretized path.
++            self._rotation_threshold = math.radians(35)
+diff --git a/dimos/navigation/replanning_a_star/test_global_planner.py b/dimos/navigation/replanning_a_star/test_global_planner.py
+--- a/dimos/navigation/replanning_a_star/test_global_planner.py
++++ b/dimos/navigation/replanning_a_star/test_global_planner.py
+@@ -21 +21,45 @@
+-from dimos.navigation.replanning_a_star.global_planner import GlobalPlanner
++from dimos.navigation.replanning_a_star.global_planner import (
++    GlobalPlanner,
++    add_acceptance_obstacle,
++    path_is_collision_free,
++)
++
++
++def test_acceptance_obstacle_is_rasterized_into_costmap() -> None:
++    grid = np.zeros((80, 80), dtype=np.int8)
++    costmap = OccupancyGrid(
++        grid=grid,
++        resolution=0.05,
++        origin=Pose(position=Vector3(-2, -1, 0)),
++        frame_id="world",
++    )
++    result = add_acceptance_obstacle(costmap)
++
++    assert np.count_nonzero(result.grid == 100) > 0
++    assert np.count_nonzero(costmap.grid == 100) == 0
++    assert result.cell_value(Vector3(-0.451889732, 1.238925028, 0)) == 100
++
++
++def test_path_collision_check_samples_between_poses() -> None:
++    grid = np.zeros((20, 20), dtype=np.int8)
++    grid[10, 10] = 100
++    costmap = OccupancyGrid(grid=grid, resolution=0.1, origin=Pose(), frame_id="world")
++
++    from dimos.msgs.geometry_msgs.PoseStamped import PoseStamped
++    from dimos.msgs.nav_msgs.Path import Path
++
++    crossing = Path(
++        poses=[
++            PoseStamped(position=Vector3(0.5, 1.05, 0)),
++            PoseStamped(position=Vector3(1.5, 1.05, 0)),
++        ]
++    )
++    clear = Path(
++        poses=[
++            PoseStamped(position=Vector3(0.5, 0.5, 0)),
++            PoseStamped(position=Vector3(1.5, 0.5, 0)),
++        ]
++    )
++
++    assert not path_is_collision_free(crossing, costmap)
++    assert path_is_collision_free(clear, costmap)
+diff --git a/dimos/simulation/mujoco/mujoco_process.py b/dimos/simulation/mujoco/mujoco_process.py
+--- a/dimos/simulation/mujoco/mujoco_process.py
++++ b/dimos/simulation/mujoco/mujoco_process.py
+@@ -51,0 +52,14 @@
++def _acceptance_position_is_clear(x: float, y: float) -> bool:
++    if os.getenv("DIMOS_MUJOCO_ACCEPTANCE_OBSTACLE") != "1":
++        return True
++    center_x, center_y = -0.451889732, 1.238925028
++    yaw = 0.412813891
++    cosine, sine = math.cos(yaw), math.sin(yaw)
++    dx, dy = x - center_x, y - center_y
++    local_x = cosine * dx + sine * dy
++    local_y = -sine * dx + cosine * dy
++    outside_x = max(abs(local_x) - 0.08, 0.0)
++    outside_y = max(abs(local_y) - 0.35, 0.0)
++    return math.hypot(outside_x, outside_y) > 0.31
++
++
+@@ -62,2 +76,9 @@
+-    data.qpos[0] += (math.cos(yaw) * forward - math.sin(yaw) * left) * dt
+-    data.qpos[1] += (math.sin(yaw) * forward + math.cos(yaw) * left) * dt
++    proposed_x = data.qpos[0] + (
++        math.cos(yaw) * forward - math.sin(yaw) * left
++    ) * dt
++    proposed_y = data.qpos[1] + (
++        math.sin(yaw) * forward + math.cos(yaw) * left
++    ) * dt
++    if _acceptance_position_is_clear(proposed_x, proposed_y):
++        data.qpos[0] = proposed_x
++        data.qpos[1] = proposed_y

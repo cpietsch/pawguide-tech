@@ -1,0 +1,97 @@
+{
+  "arrival_error_m": 0.165,
+  "checks": [
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": null,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "[\"demo_a\", \"demo_b\", \"home\"]",
+      "elapsed_ms": null,
+      "name": "endpoint_allowlist",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"5cf8d103-afa6-426b-bc28-a05452205c88\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "initial_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_stop\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "initial_stop_invariants",
+      "passed": true
+    },
+    {
+      "detail": "demo_a->home",
+      "elapsed_ms": null,
+      "name": "endpoint_selected",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"4ba836bc-a6d9-4cde-85d5-d1a54b66b9b4\", \"reason\": \"stop_reset\", \"state\": \"idle\"}",
+      "elapsed_ms": null,
+      "name": "arm",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"4ed4ba2d-7829-4012-956a-a410f9a382fa\", \"reason\": \"navigation_started\", \"state\": \"navigating\"}",
+      "elapsed_ms": null,
+      "name": "navigation_dispatch",
+      "passed": true
+    },
+    {
+      "detail": "samples=3, displacement=1.241m, error=0.165m",
+      "elapsed_ms": null,
+      "name": "sustained_arrival",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"aca63f24-e8f8-40eb-9489-ef255763e895\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "final_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_stop\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "final_stop_invariants",
+      "passed": true
+    },
+    {
+      "detail": "elapsed=96.067s limit=240s",
+      "elapsed_ms": null,
+      "name": "leg_runtime",
+      "passed": true
+    }
+  ],
+  "displacement_m": 1.241,
+  "elapsed_s": 96.067,
+  "final_pose": [
+    -1.1538966782374465,
+    1.0563824228447012,
+    0.29355266201438357
+  ],
+  "final_state": {
+    "active_waypoint": null,
+    "last_stop_reason": "operator_stop",
+    "mission_state": "stopped",
+    "operator_heartbeat_fresh": false,
+    "stop_latched": true
+  },
+  "finished_at": "2026-07-25T16:31:15.073106+00:00",
+  "index": 2,
+  "initial_pose": [
+    -0.007844676363296658,
+    1.5315074462524532,
+    0.2950749012982148
+  ],
+  "passed": true,
+  "start_waypoint": "demo_a",
+  "started_at": "2026-07-25T16:29:39.005796+00:00",
+  "target_waypoint": "home",
+  "watchdog_exercised": false
+}

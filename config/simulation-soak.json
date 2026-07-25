@@ -1,0 +1,21 @@
+{
+  "arrival_timeout_s": 150,
+  "arrival_tolerance_m": 0.2,
+  "endpoint_tolerance_m": 0.25,
+  "endpoints": {
+    "demo_a": [
+      0.09559794429598462,
+      1.4787140953595757
+    ],
+    "home": [
+      -0.9993774075098205,
+      0.999135961506239
+    ]
+  },
+  "heartbeat_stop_deadline_s": 3,
+  "legs": 50,
+  "max_leg_runtime_s": 240,
+  "minimum_displacement_m": 0.5,
+  "sustained_samples": 3,
+  "watchdog_every": 10
+}

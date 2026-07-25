@@ -11,6 +11,7 @@ class FakeGateway:
     def __init__(self, _url: str, _token: str) -> None:
         self.commands: list[str] = []
         self.heartbeat_stopped = False
+        self.last_stop_reason = "operator_stop"
         self.__class__.instances.append(self)
 
     def request(
@@ -28,15 +29,12 @@ class FakeGateway:
         if path == "/v1/capabilities":
             return {"allowed_waypoints": ["home", "demo_a"]}, 25.0
         if path == "/v1/state":
-            reason = (
-                "operator_heartbeat_timeout"
-                if self.heartbeat_stopped
-                else "operator_stop"
-            )
             return {
+                "active_waypoint": None,
                 "stop_latched": True,
                 "mission_state": "stopped",
-                "last_stop_reason": reason,
+                "last_stop_reason": self.last_stop_reason,
+                "operator_heartbeat_fresh": False,
             }, 25.0
         raise AssertionError(path)
 
@@ -45,6 +43,7 @@ class FakeGateway:
     ) -> tuple[dict[str, Any], float]:
         self.commands.append(action.value)
         if action is acceptance.Action.STOP:
+            self.last_stop_reason = "operator_stop"
             return {"accepted": True, "state": "stopped"}, 25.0
         if action is acceptance.Action.RESET_STOP:
             return {"accepted": True, "state": "idle"}, 25.0
@@ -55,6 +54,7 @@ class FakeGateway:
 
     def stop_heartbeat(self) -> None:
         self.heartbeat_stopped = True
+        self.last_stop_reason = "operator_heartbeat_timeout"
 
     def close(self) -> None:
         pass
@@ -73,6 +73,9 @@ class FakePoses:
     def latest(self) -> tuple[list[float], int]:
         self.updates += 1
         return [0.1, 1.48, 0.3], self.updates
+
+    def evidence(self) -> tuple[list[list[float]], list[list[float]]]:
+        return [], []
 
     def close(self) -> None:
         pass
@@ -108,3 +111,17 @@ def test_acceptance_requires_motion_arrival_and_finishes_stopped(monkeypatch) ->
 
 def test_percentile_uses_nearest_rank() -> None:
     assert acceptance._percentile([1, 2, 3, 4, 100], 0.95) == 100
+
+
+def test_path_metrics_rejects_segment_crossing_expanded_obstacle() -> None:
+    points = [[-1.0, 1.0], [0.1, 1.48]]
+    _, _, _, collisions = acceptance._path_metrics(
+        points,
+        start=(-1.0, 1.0),
+        goal=(0.1, 1.48),
+        obstacle_center=(-0.45, 1.24),
+        obstacle_yaw=0.41,
+        obstacle_half_extents=(0.08, 0.35),
+        robot_radius=0.3,
+    )
+    assert collisions == [0]

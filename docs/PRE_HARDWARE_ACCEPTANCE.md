@@ -83,3 +83,58 @@ was 1.068 m, and arrival error was 0.047 m. Heartbeat loss latched STOP with
 `operator_heartbeat_timeout`; the unconditional final STOP also passed. An
 independent state read finished `STOPPED`, with `stop_latched=true`, no active
 waypoint and a stale heartbeat.
+
+## Obstacle and soak qualification
+
+The deterministic MuJoCo acceptance scene adds a physical wall across the
+commissioned `home` to `demo_a` route. The planner also receives the same
+static geometry in its simulation-only costmap, avoiding a startup race with
+incremental lidar mapping. The acceptance runner records the complete planned
+polyline and executed odometry trajectory. It requires:
+
+- a path at least 1.25 times the direct route with at least 0.5 m lateral
+  deviation;
+- no planned segment inside the wall plus the robot envelope (with one 5 cm
+  planning-grid tolerance);
+- no executed segment inside the physical wall plus the full 0.3 m robot
+  radius;
+- arrival, heartbeat-loss STOP, and the complete final STOP invariants.
+
+The passing live artifact is
+`artifacts/pre-hardware-obstacle-acceptance.json`. On 2026-07-26 it recorded a
+2.135 m path (1.638 times direct), 0.731 m maximum lateral deviation, 40
+collision-free trajectory samples, 0.187 m arrival error, and 96.53 ms gateway
+p95 latency. Its SHA-256 is:
+
+```text
+422aca2e42cf5c179a78407fccdd99087a0ff0a3da86be88d9842ab971548fae
+```
+
+`pawguide-soak` alternates `home` and `demo_a`, starts every leg from a verified
+endpoint and STOP latch, requires three fresh sustained-arrival samples, and
+returns to a verified STOP latch after every leg. Every tenth leg deliberately
+lets the heartbeat expire. A two-leg commissioning round trip passed in
+`artifacts/soak/commissioning-retry-20260726/`.
+
+This is commissioning evidence, not the final endurance gate. Final
+pre-hardware qualification still requires 50 consecutive legs (25 round
+trips), zero failures, and a separate loaded-resource observation.
+The commissioning aggregate report SHA-256 is:
+
+```text
+e3bd961b3565d60f14fa7ac4dda7a7ef63a49ede7a0d62e7ce52aaba7d4a71c7
+```
+
+## Concept traceability limits
+
+The current simulation route is a 1.2 m engineering fixture named `demo_a`.
+The showcase concept specifies an approximately 5 m protected lane and a
+waypoint named `demo_gate`. Before calling the complete showcase accepted, the
+simulation must be recommissioned with that geometry and exact allowlist, then
+run the full stand/greet/navigate/operator-confirm/return/sit/STOP sequence
+within the 120-second hard limit.
+
+The present wall test proves collision-free replanning in an open simulated
+area. The concept also calls for a blocked-lane test in which the robot stops
+rather than leaving the protected lane. That requires an explicit lane
+boundary model and remains a separate fail-closed scenario.

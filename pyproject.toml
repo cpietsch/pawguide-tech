@@ -25,6 +25,7 @@ pawguide-gateway = "pawguide.app:main"
 pawguide-client = "pawguide.client:main"
 pawguide-operator = "pawguide.operator:main"
 pawguide-acceptance = "pawguide.acceptance:main"
+pawguide-soak = "pawguide.soak:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pawguide"]

@@ -2,6 +2,7 @@
 exec 2>&1
 export NO_PROXY=127.0.0.1,localhost
 export DIMOS_MUJOCO_KINEMATIC_DRIVE=1
+export DIMOS_MUJOCO_ACCEPTANCE_OBSTACLE=1
 export LD_LIBRARY_PATH=/opt/pawguide-venv/lib/python3.12/site-packages/nvidia/cu13/lib:/opt/pawguide-venv/lib/python3.12/site-packages/nvidia/cudnn/lib
 exec /usr/bin/xvfb-run -a -s '-screen 0 1280x1024x24' \
   /opt/pawguide-venv/bin/dimos \

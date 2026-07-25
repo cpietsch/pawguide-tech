@@ -1,0 +1,541 @@
+{
+  "arrival_error_m": 0.187,
+  "checks": [
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": null,
+      "name": "gateway_warmup",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 20.33773498260416,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 18.476378987543285,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 104.97853098786436,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 22.26083801360801,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 17.42623999598436,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 21.486104000359774,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 20.355916989501566,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 96.53185898787342,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 20.874034002190456,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 21.001039014663547,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 21.523886010982096,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 21.314701007213444,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 19.9094979907386,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 15.597354009514675,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 15.674459980800748,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 15.546026988886297,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 17.90610799798742,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 17.008109018206596,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 18.525289022363722,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": 17.30846898863092,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "p95=96.53ms limit=750ms",
+      "elapsed_ms": null,
+      "name": "gateway_latency",
+      "passed": true
+    },
+    {
+      "detail": "waypoint='demo_a' allowed=['demo_a', 'demo_b', 'home']",
+      "elapsed_ms": 19.667105982080102,
+      "name": "waypoint_allowlisted",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"472a19b1-06e9-4f8c-a081-1bf0dbed796c\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": 998.6899470095523,
+      "name": "initial_stop",
+      "passed": true
+    },
+    {
+      "detail": "initial_pose=[-1.1347086392952292, 1.0479469797253032, 0.29468977432282767]",
+      "elapsed_ms": null,
+      "name": "pose_stream",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"dcc984d9-de54-478a-997c-362ead2dc64e\", \"reason\": \"stop_reset\", \"state\": \"idle\"}",
+      "elapsed_ms": 22.402676986530423,
+      "name": "arm",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"4eb77d6d-2017-49e1-b5d2-85ab90cea241\", \"reason\": \"navigation_started\", \"state\": \"navigating\"}",
+      "elapsed_ms": 306.15379798109643,
+      "name": "navigation_dispatch",
+      "passed": true
+    },
+    {
+      "detail": "displacement=1.231m minimum=0.5m; arrival_error=0.187m tolerance=0.2m",
+      "elapsed_ms": null,
+      "name": "waypoint_arrival",
+      "passed": true
+    },
+    {
+      "detail": "robot_radius=0.3; grid_tolerance=0.05; collision_segments=[]",
+      "elapsed_ms": null,
+      "name": "planned_path_collision_free",
+      "passed": true
+    },
+    {
+      "detail": "length=2.135m ratio=1.638 minimum_ratio=1.25; lateral=0.731m minimum=0.5m",
+      "elapsed_ms": null,
+      "name": "planned_path_detour",
+      "passed": true
+    },
+    {
+      "detail": "samples=40; collision_segments=[]",
+      "elapsed_ms": null,
+      "name": "trajectory_collision_free",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_heartbeat_timeout\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "heartbeat_loss_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"af70368c-8070-45d5-a21a-f4957be294e0\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": 856.0625349928159,
+      "name": "final_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_stop\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "final_stop_invariants",
+      "passed": true
+    }
+  ],
+  "displacement_m": 1.231,
+  "final_pose": [
+    -0.03919644898350942,
+    1.6088535765016672,
+    0.2960956184236097
+  ],
+  "final_state": {
+    "active_waypoint": null,
+    "last_stop_reason": "operator_stop",
+    "mission_state": "stopped",
+    "operator_heartbeat_fresh": false,
+    "stop_latched": true
+  },
+  "finished_at": "2026-07-25T16:34:31.806835+00:00",
+  "gateway_latency_ms": {
+    "max": 104.98,
+    "median": 20.12,
+    "p95": 96.53
+  },
+  "gateway_url": "http://100.72.30.53:8876",
+  "initial_pose": [
+    -1.1347086392952292,
+    1.0479469797253032,
+    0.29468977432282767
+  ],
+  "passed": true,
+  "path_detour_ratio": 1.638,
+  "path_length_m": 2.135,
+  "path_max_lateral_m": 0.731,
+  "planned_path": [
+    [
+      -1.174999825656414,
+      1.025000210851431
+    ],
+    [
+      -1.2408381090985587,
+      1.0963303094351553
+    ],
+    [
+      -1.2710234384962864,
+      1.1878291977775044
+    ],
+    [
+      -1.2699677657760096,
+      1.2848011832254553
+    ],
+    [
+      -1.2406181904843283,
+      1.3770026440286949
+    ],
+    [
+      -1.1872555558260929,
+      1.4580005831744702
+    ],
+    [
+      -1.1209723614569336,
+      1.5290276817564343
+    ],
+    [
+      -1.052244010274733,
+      1.597756032938633
+    ],
+    [
+      -0.9835156590925325,
+      1.6664843841208314
+    ],
+    [
+      -0.9147873079103318,
+      1.7352127353030302
+    ],
+    [
+      -0.8460589567281311,
+      1.8039410864852288
+    ],
+    [
+      -0.7763088326828286,
+      1.8716081935264293
+    ],
+    [
+      -0.6981786843159667,
+      1.9291528001393239
+    ],
+    [
+      -0.60847989161111,
+      1.9656111012008466
+    ],
+    [
+      -0.5119389232083106,
+      1.9694921153593397
+    ],
+    [
+      -0.42005647015352504,
+      1.9391317809258477
+    ],
+    [
+      -0.33945656104518174,
+      1.8851589714744652
+    ],
+    [
+      -0.26864156294096325,
+      1.818641973467949
+    ],
+    [
+      -0.19991321175876273,
+      1.7499136222857505
+    ],
+    [
+      -0.13118486057656223,
+      1.6811852711035522
+    ],
+    [
+      -0.06245650939436259,
+      1.6124569199213534
+    ],
+    [
+      0.0062718417878377215,
+      1.5437285687391529
+    ],
+    [
+      0.07500019297003746,
+      1.4750002175569534
+    ]
+  ],
+  "started_at": "2026-07-25T16:34:09.087051+00:00",
+  "target_pose": [
+    0.09559794429598462,
+    1.4787140953595757
+  ],
+  "trajectory": [
+    [
+      -1.1347086392952292,
+      1.0479469797253032,
+      0.29468977432282767
+    ],
+    [
+      -1.1346695315508484,
+      1.0479278068973537,
+      0.29468962790771797
+    ],
+    [
+      -1.1346347289436531,
+      1.0479225040681743,
+      0.2946101445090811
+    ],
+    [
+      -1.1346622764052776,
+      1.04793049025742,
+      0.29438853080263977
+    ],
+    [
+      -1.1346341912285316,
+      1.0479866003002964,
+      0.2942299046450104
+    ],
+    [
+      -1.134599115951039,
+      1.048066048987213,
+      0.2940695077343547
+    ],
+    [
+      -1.134546168725961,
+      1.0481812911047559,
+      0.29398973770002973
+    ],
+    [
+      -1.1345424724246271,
+      1.0483066579499003,
+      0.2939335958427961
+    ],
+    [
+      -1.134571865901384,
+      1.0483791042789812,
+      0.2936428955270341
+    ],
+    [
+      -1.168614838529116,
+      1.1022481394046335,
+      0.29346583861736236
+    ],
+    [
+      -1.2110055950727,
+      1.1576549851877622,
+      0.29373792925754993
+    ],
+    [
+      -1.275469706446208,
+      1.2311106151095499,
+      0.2941094764079678
+    ],
+    [
+      -1.2758290283505356,
+      1.2315474846378596,
+      0.2944604026492175
+    ],
+    [
+      -1.300663316633245,
+      1.2994462140331828,
+      0.2947386599279556
+    ],
+    [
+      -1.3008337883139018,
+      1.2999051279454579,
+      0.29500759572059543
+    ],
+    [
+      -1.2896729001616423,
+      1.3779453045263343,
+      0.29522007661309435
+    ],
+    [
+      -1.2895802086854615,
+      1.3784250532270856,
+      0.29542319838703757
+    ],
+    [
+      -1.254405915850787,
+      1.4282890019098513,
+      0.29559283982391205
+    ],
+    [
+      -1.2086973422470502,
+      1.485262780417557,
+      0.29572928346267097
+    ],
+    [
+      -1.1393264647555565,
+      1.5580232090122632,
+      0.2957797070186109
+    ],
+    [
+      -1.082185645710049,
+      1.6069999491275868,
+      0.29578349729426495
+    ],
+    [
+      -1.0016487238421186,
+      1.6660061167176876,
+      0.2957832822172955
+    ],
+    [
+      -1.0011369994978092,
+      1.6662976058670633,
+      0.29580521080875344
+    ],
+    [
+      -0.9186506524151878,
+      1.729846312317382,
+      0.29575233213893654
+    ],
+    [
+      -0.8268648917143512,
+      1.8118533008201438,
+      0.2956860258854859
+    ],
+    [
+      -0.7671610805181923,
+      1.876183620430426,
+      0.2955526119136802
+    ],
+    [
+      -0.7219150617804357,
+      1.9314834373124727,
+      0.2954296356349021
+    ],
+    [
+      -0.6585245348760418,
+      1.9985225734137375,
+      0.29533536099628277
+    ],
+    [
+      -0.6581016378607087,
+      1.998820929413493,
+      0.29531068534323807
+    ],
+    [
+      -0.6577993871700129,
+      1.998872818320696,
+      0.2955884260270777
+    ],
+    [
+      -0.5583773678727227,
+      2.011573475310393,
+      0.29608656389977034
+    ],
+    [
+      -0.4814233350493138,
+      2.0136139474959567,
+      0.2962651487886135
+    ],
+    [
+      -0.4810625391213018,
+      2.013526947260969,
+      0.2963102037756505
+    ],
+    [
+      -0.40556526948802046,
+      1.9747267301194666,
+      0.29626195247682774
+    ],
+    [
+      -0.3204952505755056,
+      1.9214428112286273,
+      0.29632038237181596
+    ],
+    [
+      -0.26700840509650947,
+      1.8799589298281205,
+      0.2963299197869564
+    ],
+    [
+      -0.19238708855888104,
+      1.8127043993905951,
+      0.29628882004558604
+    ],
+    [
+      -0.13981673639313552,
+      1.7548026974225759,
+      0.29621795065597184
+    ],
+    [
+      -0.0957870155085444,
+      1.6979608581664647,
+      0.29615274134392666
+    ],
+    [
+      -0.03919644898350942,
+      1.6088535765016672,
+      0.2960956184236097
+    ]
+  ],
+  "visualization_url": "http://100.102.208.90:7780",
+  "waypoint": "demo_a"
+}

@@ -1,0 +1,44 @@
+{
+  "arrival_tolerance_m": 0.2,
+  "endpoints": {
+    "demo_gate": [
+      3.6,
+      0.9698703145794942,
+      0.295
+    ],
+    "home": [
+      0.0,
+      -2.5,
+      0.295
+    ]
+  },
+  "home_tolerance_m": 0.2,
+  "maximum_safe_displacement_m": 0.3,
+  "observation_timeout_s": 5,
+  "protected_corridor": {
+    "center": [
+      1.8,
+      -0.7650648427102529
+    ],
+    "half_extents": [
+      2.9,
+      0.6
+    ],
+    "yaw": 0.7670060078618666
+  },
+  "robot_radius_m": 0.3,
+  "sealed_barrier": {
+    "center": [
+      1.8,
+      -0.7650648427102529
+    ],
+    "half_extents": [
+      0.12,
+      3.1
+    ],
+    "yaw": 0.7670060078618666
+  },
+  "stationary_samples": 3,
+  "stationary_step_m": 0.02,
+  "stop_timeout_s": 3
+}

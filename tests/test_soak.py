@@ -28,6 +28,12 @@ class FakePoses:
     def close(self) -> None:
         pass
 
+    def reset_path(self) -> None:
+        pass
+
+    def wait_for_path(self, _timeout_s: float) -> list[list[float]]:
+        return [[-1.0, 1.0], [0.1, 1.48]]
+
 
 class FakeGateway:
     instances: list["FakeGateway"] = []
@@ -131,6 +137,7 @@ def test_soak_alternates_and_writes_a_safe_artifact_per_leg(
         visualization_url="http://viewer",
         token="secret",
         endpoints={"home": (-1.0, 1.0), "demo_a": (0.1, 1.48)},
+        destination_waypoint="demo_a",
         legs=2,
         artifact_dir=tmp_path,
         sustained_samples=3,
@@ -217,6 +224,7 @@ def test_failed_leg_still_stops_and_writes_failure_artifact(
         visualization_url="http://viewer",
         token="secret",
         endpoints={"home": (-1.0, 1.0), "demo_a": (0.1, 1.48)},
+        destination_waypoint="demo_a",
         legs=2,
         artifact_dir=tmp_path,
     )

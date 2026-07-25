@@ -2,7 +2,13 @@
 exec 2>&1
 export NO_PROXY=127.0.0.1,localhost
 export DIMOS_MUJOCO_KINEMATIC_DRIVE=1
-export DIMOS_MUJOCO_ACCEPTANCE_OBSTACLE=1
+# A root-owned override can select a fixture without editing this service.
+if [ -r /etc/pawguide/pawguide-dimos.env ]; then
+  . /etc/pawguide/pawguide-dimos.env
+fi
+# Keep the commissioned short course as the default. Set concept_gate in the
+# service environment to run the five-metre showcase fixture.
+export DIMOS_MUJOCO_FIXTURE="${DIMOS_MUJOCO_FIXTURE:-engineering_short}"
 export LD_LIBRARY_PATH=/opt/pawguide-venv/lib/python3.12/site-packages/nvidia/cu13/lib:/opt/pawguide-venv/lib/python3.12/site-packages/nvidia/cudnn/lib
 exec /usr/bin/xvfb-run -a -s '-screen 0 1280x1024x24' \
   /opt/pawguide-venv/bin/dimos \

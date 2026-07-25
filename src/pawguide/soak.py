@@ -149,6 +149,7 @@ def run_soak(
     visualization_url: str,
     token: str,
     endpoints: dict[str, tuple[float, float]],
+    destination_waypoint: str,
     legs: int,
     artifact_dir: Path,
     minimum_displacement_m: float = 0.5,
@@ -160,8 +161,10 @@ def run_soak(
     watchdog_every: int = 10,
     max_leg_runtime_s: float = 240,
 ) -> SoakReport:
-    if set(endpoints) != {"home", "demo_a"}:
-        raise ValueError("soak endpoints must be exactly home and demo_a")
+    if set(endpoints) != {"home", destination_waypoint}:
+        raise ValueError(
+            "soak endpoints must be exactly home and the configured destination"
+        )
     if legs < 1 or sustained_samples < 1 or watchdog_every < 1:
         raise ValueError("legs, sustained_samples and watchdog_every must be positive")
 
@@ -222,7 +225,9 @@ def run_soak(
                     leg.initial_pose, endpoints, endpoint_tolerance_m
                 )
                 leg.target_waypoint = (
-                    "demo_a" if leg.start_waypoint == "home" else "home"
+                    destination_waypoint
+                    if leg.start_waypoint == "home"
+                    else "home"
                 )
                 target_pose = endpoints[leg.target_waypoint]
                 check(
@@ -240,6 +245,7 @@ def run_soak(
                     and reset.get("reason") == "stop_reset",
                     json.dumps(reset, sort_keys=True),
                 )
+                poses.reset_path()
                 navigation, _ = gateway.command(
                     Action.GO_TO_WAYPOINT,
                     waypoint_id=leg.target_waypoint,
@@ -250,6 +256,12 @@ def run_soak(
                     and navigation.get("state") == "navigating"
                     and navigation.get("reason") == "navigation_started",
                     json.dumps(navigation, sort_keys=True),
+                )
+                planned_path = poses.wait_for_path(10)
+                check(
+                    "navigation_map_ready",
+                    len(planned_path) >= 2,
+                    f"planned_points={len(planned_path)}",
                 )
 
                 _, initial_updates = poses.latest()
@@ -395,6 +407,7 @@ def main() -> None:
             name: tuple(value[:2])
             for name, value in scenario["endpoints"].items()
         },
+        destination_waypoint=scenario["destination_waypoint"],
         legs=args.legs or scenario["legs"],
         artifact_dir=args.artifact_dir,
         minimum_displacement_m=scenario["minimum_displacement_m"],

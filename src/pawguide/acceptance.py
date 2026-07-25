@@ -148,6 +148,19 @@ class PoseMonitor:
                 [list(point) for point in self._trajectory],
             )
 
+    def wait_for_path(self, timeout_s: float) -> list[list[float]]:
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            with self._lock:
+                if self._path:
+                    return [list(point) for point in self._path]
+            time.sleep(0.05)
+        raise TimeoutError("no planned path telemetry received")
+
+    def reset_path(self) -> None:
+        with self._lock:
+            self._path = []
+
     def close(self) -> None:
         self._stop.set()
         self._client.disconnect()
@@ -333,6 +346,22 @@ def _path_metrics(
     return length, length / direct, lateral, collisions
 
 
+def _outside_arena_segments(
+    points: list[list[float]],
+    bounds: tuple[float, float, float, float],
+    inset: float,
+) -> list[int]:
+    min_x, max_x, min_y, max_y = bounds
+    return [
+        index
+        for index, point in enumerate(points)
+        if not (
+            min_x + inset <= point[0] <= max_x - inset
+            and min_y + inset <= point[1] <= max_y - inset
+        )
+    ]
+
+
 def run_acceptance(
     *,
     gateway_url: str,
@@ -351,6 +380,7 @@ def run_acceptance(
     planning_grid_tolerance_m: float = 0.0,
     minimum_path_detour_ratio: float = 1.0,
     minimum_path_lateral_m: float = 0.0,
+    arena_bounds: tuple[float, float, float, float] | None = None,
 ) -> AcceptanceReport:
     report = AcceptanceReport(
         started_at=datetime.now(UTC).isoformat(),
@@ -440,6 +470,12 @@ def run_acceptance(
             json.dumps(navigation, sort_keys=True),
             elapsed,
         )
+        planned_path = poses.wait_for_path(10)
+        check(
+            "navigation_map_ready",
+            len(planned_path) >= 2,
+            f"planned_points={len(planned_path)}",
+        )
 
         deadline = time.monotonic() + 90
         initial_updates = poses.latest()[1]
@@ -521,6 +557,27 @@ def run_acceptance(
                 f"samples={len(report.trajectory)}; "
                 f"collision_segments={trajectory_collisions}",
             )
+            if arena_bounds is not None:
+                path_outside = _outside_arena_segments(
+                    report.planned_path,
+                    arena_bounds,
+                    max(0.0, robot_radius_m - planning_grid_tolerance_m),
+                )
+                trajectory_outside = _outside_arena_segments(
+                    report.trajectory,
+                    arena_bounds,
+                    robot_radius_m,
+                )
+                check(
+                    "planned_path_inside_lane",
+                    not path_outside,
+                    f"bounds={arena_bounds}; outside_points={path_outside}",
+                )
+                check(
+                    "trajectory_inside_lane",
+                    not trajectory_outside,
+                    f"bounds={arena_bounds}; outside_samples={trajectory_outside}",
+                )
 
         # Prove the edge watchdog, independently of an explicit STOP request.
         gateway.stop_heartbeat()
@@ -625,6 +682,7 @@ def main() -> None:
         planning_grid_tolerance_m=scenario["obstacle"]["planning_grid_tolerance_m"],
         minimum_path_detour_ratio=scenario["minimum_path_detour_ratio"],
         minimum_path_lateral_m=scenario["minimum_path_lateral_m"],
+        arena_bounds=tuple(scenario["arena_bounds"]),
     )
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(

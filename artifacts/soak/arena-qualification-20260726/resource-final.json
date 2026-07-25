@@ -1,0 +1,62 @@
+{
+  "captured_at": "2026-07-25T18:00:08Z",
+  "china": {
+    "nginx_restarts": 0,
+    "tunnel_restarts": 0
+  },
+  "endpoints": {
+    "simulator_status_ms": [
+      160,
+      236
+    ],
+    "viewer_direct_ms": [
+      118,
+      196
+    ],
+    "viewer_status_ms": [
+      158,
+      196
+    ],
+    "x5_health_ms": [
+      33,
+      35
+    ],
+    "x5_health_cold_ms": 34
+  },
+  "gpu": {
+    "allocated_mib": 1342,
+    "memory_utilization_percent": 0,
+    "power_watts": [
+      103,
+      137
+    ],
+    "sm_utilization_percent": 0,
+    "temperature_c": [
+      44,
+      45
+    ]
+  },
+  "host": {
+    "available_gib": 77,
+    "free_gib": 58,
+    "load_average": [
+      26.27,
+      25.86,
+      26.95
+    ],
+    "swap_gib": 0,
+    "total_gib": 87,
+    "used_gib": 11
+  },
+  "runtime": {
+    "dimos_launcher_count": 1,
+    "dimos_pid": 197153,
+    "dimos_uptime_s": 2594,
+    "mcp_relay_count": 1,
+    "mcp_relay_pid": 12157,
+    "mujoco_cpu_percent": 1332,
+    "mujoco_process_count": 1,
+    "mujoco_rss_gib": 5.9,
+    "watchdog_process_count": 1
+  }
+}

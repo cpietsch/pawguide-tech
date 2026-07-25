@@ -26,6 +26,10 @@ pawguide-client = "pawguide.client:main"
 pawguide-operator = "pawguide.operator:main"
 pawguide-acceptance = "pawguide.acceptance:main"
 pawguide-soak = "pawguide.soak:main"
+pawguide-show-acceptance = "pawguide.show_acceptance:main"
+pawguide-blocked-lane-acceptance = "pawguide.blocked_lane_acceptance:main"
+pawguide-failure-matrix = "pawguide.failure_matrix_acceptance:main"
+pawguide-concept-suite = "pawguide.concept_suite:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pawguide"]

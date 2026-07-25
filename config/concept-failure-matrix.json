@@ -1,0 +1,14 @@
+{
+  "duplicate_max_elapsed_ms": 750,
+  "duplicate_max_ratio": 0.5,
+  "final_state_timeout_s": 3,
+  "heartbeat_test_waypoint": "home",
+  "heartbeat_timeout_s": 2.5,
+  "misspelled_waypoint": "demo_gtae",
+  "no_auto_rearm_s": 1,
+  "required_waypoints": [
+    "home",
+    "demo_gate"
+  ],
+  "soak_report_path": "artifacts/soak/arena-qualification-20260726/soak-report.json"
+}

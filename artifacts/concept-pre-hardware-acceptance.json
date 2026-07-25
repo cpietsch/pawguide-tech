@@ -1,0 +1,112 @@
+{
+  "acceptance_scope": "simulation_pre_hardware",
+  "artifact_schema_version": 1,
+  "checks": [
+    {
+      "detail": "50/50 legs; five live heartbeat-loss injections.",
+      "name": "endurance",
+      "passed": true
+    },
+    {
+      "detail": "66.128s; stationary and orientation evidence; zero protected-corridor exits.",
+      "name": "show",
+      "passed": true
+    },
+    {
+      "detail": "0.003m maximum displacement; no path, bypass, barrier crossing, or arrival claim.",
+      "name": "blocked-lane",
+      "passed": true
+    },
+    {
+      "detail": "Heartbeat-loss STOP 1.609s; authorization, allowlist, validation, idempotency, and no-auto-rearm.",
+      "name": "failure-matrix",
+      "passed": true
+    }
+  ],
+  "completed_steps": 4,
+  "evidence": {
+    "blocked_lane": {
+      "path": "artifacts/concept-gate-blocked-acceptance.json",
+      "sha256": "8e44a6376aefa8ef112e816313711d174eff1d0d72c0c165fddb06fc804eec0e"
+    },
+    "failure_matrix": {
+      "path": "artifacts/concept-failure-matrix.json",
+      "sha256": "e8a94dcbef3ac20249e6312b3d2ff850c4a71ca77254352a5820e9b13311a531"
+    },
+    "show": {
+      "path": "artifacts/concept-show-acceptance.json",
+      "sha256": "1002e575ac2bc0eac7f48247ae7a7a22b25baa2848a58570b3be5baa187375ad"
+    },
+    "soak": {
+      "path": "artifacts/soak/arena-qualification-20260726/soak-report.json",
+      "sha256": "3e49e75e5f6459ccb93a3d549c3386d1d8fa73a285abefbe25fc386b040a7564"
+    }
+  },
+  "final_state": {
+    "active_waypoint": null,
+    "last_stop_reason": "operator_stop",
+    "mission_state": "stopped",
+    "operator_heartbeat_fresh": false,
+    "stop_latched": true
+  },
+  "finished_at": "2026-07-25T19:11:58.436221+00:00",
+  "message": "Simulation pre-hardware gates passed; physical Go2 and venue gates remain separate and pending.",
+  "passed": true,
+  "physical_gates": [
+    {
+      "name": "Go2 supported-off-ground posture and gesture tests",
+      "status": "pending_physical_hardware"
+    },
+    {
+      "name": "Go2 floor motion, stopping-distance, and heartbeat-loss tests",
+      "status": "pending_physical_hardware"
+    },
+    {
+      "name": "RDK X5 mounting, power, cooling, strap, and cable retention",
+      "status": "pending_physical_hardware"
+    },
+    {
+      "name": "Final booth barriers, measured clearance, waypoints, and route rehearsal",
+      "status": "pending_physical_hardware"
+    },
+    {
+      "name": "Ring mechanical load, entanglement, release, BLE, audio, and haptics",
+      "status": "pending_physical_hardware"
+    },
+    {
+      "name": "Dedicated operator, spotter, local STOP, and stationary fallback",
+      "status": "pending_physical_hardware"
+    }
+  ],
+  "requested_steps": 4,
+  "sequence": [
+    {
+      "evidence": "50/50 legs; five live heartbeat-loss injections.",
+      "id": "endurance",
+      "label": "50-leg navigation endurance",
+      "status": "passed"
+    },
+    {
+      "evidence": "66.128s; stationary and orientation evidence; zero protected-corridor exits.",
+      "id": "show",
+      "label": "Complete 5 m show sequence",
+      "status": "passed"
+    },
+    {
+      "evidence": "0.003m maximum displacement; no path, bypass, barrier crossing, or arrival claim.",
+      "id": "blocked-lane",
+      "label": "Sealed-lane safe refusal",
+      "status": "passed"
+    },
+    {
+      "evidence": "Heartbeat-loss STOP 1.609s; authorization, allowlist, validation, idempotency, and no-auto-rearm.",
+      "id": "failure-matrix",
+      "label": "Gateway failure matrix",
+      "status": "passed"
+    }
+  ],
+  "show_elapsed_s": 66.128,
+  "started_at": "2026-07-25T19:05:35.555205+00:00",
+  "status": "passed",
+  "visualization_url": "http://100.102.208.90:7780"
+}

@@ -77,6 +77,9 @@ class FakePoses:
     def evidence(self) -> tuple[list[list[float]], list[list[float]]]:
         return [], []
 
+    def wait_for_path(self, _timeout_s: float) -> list[list[float]]:
+        return [[-1.0, 1.0], [0.1, 1.48]]
+
     def close(self) -> None:
         pass
 
@@ -125,3 +128,16 @@ def test_path_metrics_rejects_segment_crossing_expanded_obstacle() -> None:
         robot_radius=0.3,
     )
     assert collisions == [0]
+
+
+def test_arena_check_applies_robot_inset() -> None:
+    assert acceptance._outside_arena_segments(
+        [[-1.39, 1.0], [0.19, 2.0]],
+        (-1.7, 0.5, 0.4, 2.4),
+        0.3,
+    ) == []
+    assert acceptance._outside_arena_segments(
+        [[-1.41, 1.0], [0.21, 2.0]],
+        (-1.7, 0.5, 0.4, 2.4),
+        0.3,
+    ) == [0, 1]

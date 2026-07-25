@@ -17,9 +17,13 @@
     main { display: flex; flex: 1 1 auto; min-height: 0; }
     iframe { border: 0; min-width: 0; }
     #viewer { flex: 1 1 auto; }
-    #controls {
-      flex: 0 0 clamp(22rem, 30vw, 36rem);
+    .rail {
+      flex: 0 0 clamp(24rem, 32vw, 40rem); min-width: 0;
+      display: flex; flex-direction: column;
       border-left: 1px solid #303642;
+    }
+    #controls {
+      flex: 1 1 auto; width: 100%; min-height: 16rem;
     }
     .status::before {
       content: ""; display: inline-block; width: 8px; height: 8px;
@@ -27,6 +31,48 @@
     }
     .status.ok::before { background: #42d392; }
     .status.fail::before { background: #ff5d68; }
+    #acceptance-panel {
+      flex: 0 0 auto; max-height: 48%; overflow: auto;
+      padding: 12px 14px; background: #0e1420;
+      border-bottom: 1px solid #303642;
+    }
+    .acceptance-heading {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .acceptance-heading h2 { margin: 0; font-size: 15px; }
+    .badge {
+      padding: 3px 8px; border-radius: 999px; background: #303846;
+      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    }
+    .badge.passed { color: #07160f; background: #42d392; }
+    .badge.failed { color: #210609; background: #ff5d68; }
+    .badge.running { color: #1d1400; background: #ffc857; }
+    .acceptance-meta {
+      display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0;
+      color: #aab5c5;
+    }
+    #safety-state.safe { color: #42d392; }
+    #safety-state.unsafe { color: #ff5d68; }
+    #sequence-list, #evidence-list {
+      margin: 8px 0; padding: 0; list-style: none;
+    }
+    #sequence-list li, #evidence-list li {
+      margin: 5px 0; padding-left: 18px; position: relative;
+    }
+    #sequence-list li::before, #evidence-list li::before {
+      content: "○"; position: absolute; left: 0; color: #697386;
+    }
+    #sequence-list li.passed::before, #evidence-list li.passed::before {
+      content: "✓"; color: #42d392;
+    }
+    #sequence-list li.failed::before, #evidence-list li.failed::before {
+      content: "×"; color: #ff5d68;
+    }
+    #sequence-list li.running::before { content: "●"; color: #ffc857; }
+    #acceptance-links { display: flex; gap: 12px; margin-top: 8px; }
+    #acceptance-links a { color: #83b7ff; text-decoration: none; }
+    #acceptance-message { color: #aab5c5; margin: 8px 0 0; }
   </style>
 </head>
 <body>
@@ -38,12 +84,34 @@
   </header>
   <main>
     <iframe id="viewer" title="Live 3D Rerun viewer"></iframe>
-    <iframe id="controls" src="/command-center" title="Robot controls"></iframe>
+    <div class="rail">
+      <section id="acceptance-panel" aria-labelledby="acceptance-title">
+        <div class="acceptance-heading">
+          <h2 id="acceptance-title">Concept acceptance</h2>
+          <span id="acceptance-result" class="badge">CHECKING</span>
+        </div>
+        <div class="acceptance-meta">
+          <span id="acceptance-progress">Sequence —</span>
+          <span id="acceptance-elapsed">Elapsed —</span>
+          <span id="safety-state">Safety —</span>
+        </div>
+        <ol id="sequence-list" aria-label="Show-sequence steps"></ol>
+        <ul id="evidence-list" aria-label="Pass and fail evidence"></ul>
+        <p id="acceptance-message">Loading acceptance evidence…</p>
+        <div id="acceptance-links">
+          <a id="viewer-link" target="_blank" rel="noopener">Open live 3D viewer</a>
+          <a id="artifact-link" target="_blank" rel="noopener" hidden>Open evidence JSON</a>
+        </div>
+      </section>
+      <iframe id="controls" src="/command-center" title="Robot controls"></iframe>
+    </div>
   </main>
   <script>
     const viewerOrigin = `${location.protocol}//${location.hostname}:9879`;
     const proxyUrl = `rerun+http://${location.hostname}:9879/proxy`;
     document.querySelector("#viewer").src =
+      `${viewerOrigin}/?url=${encodeURIComponent(proxyUrl)}`;
+    document.querySelector("#viewer-link").href =
       `${viewerOrigin}/?url=${encodeURIComponent(proxyUrl)}`;
 
     async function probe(id, path, label, validate, json = false) {
@@ -80,5 +148,6 @@
     refreshStatus();
     setInterval(refreshStatus, 5000);
   </script>
+  <script src="/admin/dashboard.js"></script>
 </body>
 </html>

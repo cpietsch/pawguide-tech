@@ -1,5 +1,11 @@
 {
   "arrival_tolerance_m": 0.2,
+  "arena_bounds": [
+    -1.7,
+    0.5,
+    0.4,
+    2.4
+  ],
   "heartbeat_stop_deadline_s": 3.0,
   "max_gateway_p95_ms": 750,
   "minimum_path_detour_ratio": 1.25,

@@ -90,6 +90,56 @@ simulation proxy integrates planner velocity commands into the planar MuJoCo
 pose so the gateway, planner, mapping, collision scene and telemetry can be
 accepted end to end. Never enable it in a physical Go2 service.
 
+The service defaults to the commissioned `engineering_short` fixture. The
+five-metre concept course is separately selected by installing
+`provision/hyper/fixtures/concept-gate.env` as the root-owned
+`/etc/pawguide/pawguide-dimos.env`, installing
+`provision/hyper/fixtures/concept-gate-waypoints.json` as
+`/var/lib/pawguide/waypoints.json`, and restarting `pawguide-dimos`. Its exact
+poses are `home=(0.0, -2.5)` and
+`demo_gate=(3.6, 0.9698703145794942)`. This exact five-metre diagonal fits
+the observed robot-centred costmap extent
+`x=-4.075..4.275, y=-6.625..1.525`. Its 0.4-metre-margin arena is
+`x=-0.4..4.0, y=-2.9..1.3698703145794942`, and the direct lane is the clear
+protected route used for the complete, time-bounded show. Fixture
+selection also places the MuJoCo base at that fixture's exact `home` position
+at the final process initialization, overriding all three coordinates after
+the upstream CLI start and robot-height defaults are resolved. The CLI's
+default `(-1, 1)` start is therefore not used for either concept fixture.
+Path smoothing preserves the commissioned goal quaternion exactly. Identity
+`[0,0,0,1]` is intentional waypoint orientation, not a sentinel to replace
+with the final travel direction.
+
+The simulation-only local-planner linear cap is `0.4 m/s`, an accessible
+walking pace that gives the five-metre out-and-back show timing margin. The
+simulation lookahead remains `0.1 m`: it is intentionally short for fidelity
+to the protected lane and is not raised with the speed cap. Physical/default
+planning remains at its upstream `0.55 m/s` cap and `0.5 m` lookahead.
+
+When the explicit MuJoCo kinematic proxy is enabled, in-place rotation has a
+simulation-only `1.5 rad/s` minimum so final commissioned yaw can settle
+despite slower-than-real-time rendering throughput. The nonkinematic
+simulator retains its `0.8 rad/s` floor, and physical control is unchanged.
+
+Simulation uses a `0.15 m` position goal tolerance in both global and local
+planning, with replan tolerance no larger than the goal tolerance. This gives
+the external `0.20 m` acceptance gate margin for telemetry noise. Physical
+and default planning retain the upstream `0.20 m` tolerance.
+
+`concept_gate_blocked` is a separate negative-test fixture selected with the
+correspondingly named environment and waypoint files. Its rendered and
+planner-visible wall spans the same narrow lane from boundary to boundary,
+and it deliberately has no bypass. A run against it must fail closed with a
+STOP and must not leave the protected lane; it is not a detour-and-arrive
+test. Restore the correspondingly named engineering files to return to the
+short course. Fixture geometry is tracked in `config/mujoco-fixtures.json`.
+
+For deterministic simulation, a selected fixture owns its arena costmap:
+incoming UNKNOWN, FREE, or OCCUPIED cells inside the arena are replaced with
+FREE before the arena border and explicit fixture obstacles are rasterized.
+Apartment-scene walls therefore cannot silently obstruct the clear concept
+lane, while cells outside the fixture arena remain unchanged.
+
 DimOS has undeclared runtime requirements that were needed during migration:
 
 - `torch`;
@@ -164,9 +214,9 @@ STOP -> reset/arm -> hello -> STOP
 The final state was `STOPPED`, `stop_latched=true`, with
 `last_stop_reason=operator_stop`.
 
-The stronger pre-hardware route gate is documented in
-`docs/PRE_HARDWARE_ACCEPTANCE.md`; its machine-readable evidence is
-`artifacts/pre-hardware-acceptance.json`.
+The complete concept-level pre-hardware gate is documented in
+`docs/PRE_HARDWARE_ACCEPTANCE.md`; its consolidated machine-readable evidence
+is `artifacts/concept-pre-hardware-acceptance.json`.
 
 ## Operations
 

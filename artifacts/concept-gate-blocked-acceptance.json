@@ -1,0 +1,323 @@
+{
+  "artifact_schema_version": 1,
+  "barrier_crossing_segments": [],
+  "bounded_stop_latched_after_s": 6.009,
+  "bounded_stop_result": {
+    "accepted": true,
+    "command_id": "ecef48d6-80a9-4c96-a2e1-b8d10ee37c63",
+    "reason": "stop_latched",
+    "state": "stopped"
+  },
+  "bounded_stop_state": {
+    "active_waypoint": null,
+    "last_stop_reason": "operator_stop",
+    "mission_state": "stopped",
+    "operator_heartbeat_fresh": true,
+    "stop_latched": true
+  },
+  "checks": [
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"motion_capable\": true, \"status\": \"ok\"}",
+      "elapsed_ms": null,
+      "name": "gateway_health",
+      "passed": true
+    },
+    {
+      "detail": "actual=['demo_gate', 'home']",
+      "elapsed_ms": null,
+      "name": "exact_waypoints",
+      "passed": true
+    },
+    {
+      "detail": "yaw_alignment=0.000rad; barrier_cross_half_width=3.400m; corridor_center_half_width=0.300m",
+      "elapsed_ms": null,
+      "name": "sealed_barrier_geometry",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"899ddc5c-776e-4f32-ad5f-53d85211de32\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "initial_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_stop\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "initial_stop_invariants",
+      "passed": true
+    },
+    {
+      "detail": "[0.0013638871827942713, -2.501734501676448, 0.2947466208481663]",
+      "elapsed_ms": null,
+      "name": "stationary_home",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"7e9c5882-a563-4a51-af84-450aa1b72ea8\", \"reason\": \"stop_reset\", \"state\": \"idle\"}",
+      "elapsed_ms": null,
+      "name": "arm",
+      "passed": true
+    },
+    {
+      "detail": "points=0; complete=False; lane_exits=[]; barrier_crossings=[]",
+      "elapsed_ms": null,
+      "name": "no_complete_planned_route",
+      "passed": true
+    },
+    {
+      "detail": "maximum=0.003m; limit=0.3m",
+      "elapsed_ms": null,
+      "name": "bounded_displacement",
+      "passed": true
+    },
+    {
+      "detail": "lane_exits=[]; barrier_crossings=[]",
+      "elapsed_ms": null,
+      "name": "protected_lane_containment",
+      "passed": true
+    },
+    {
+      "detail": "minimum_gate_distance=5.0m; arrival_tolerance=0.2m",
+      "elapsed_ms": null,
+      "name": "no_arrival_claim",
+      "passed": true
+    },
+    {
+      "detail": "issued_after=5.06s; bound=5s",
+      "elapsed_ms": null,
+      "name": "bounded_stop_issue_time",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"ecef48d6-80a9-4c96-a2e1-b8d10ee37c63\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "bounded_fail_closed_stop",
+      "passed": true
+    },
+    {
+      "detail": "latched_after=6.009s; deadline=8s; state={\"active_waypoint\": null, \"last_stop_reason\": \"operator_stop\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": true, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "bounded_stop_latched",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"42000ade-7f5b-4c59-b975-a585f873003f\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "final_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_stop\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "final_stop_invariants",
+      "passed": true
+    }
+  ],
+  "criteria": {
+    "arrival_tolerance_m": 0.2,
+    "home_tolerance_m": 0.2,
+    "maximum_safe_displacement_m": 0.3,
+    "observation_timeout_s": 5,
+    "robot_radius_m": 0.3,
+    "stationary_samples": 3,
+    "stationary_step_m": 0.02,
+    "stop_timeout_s": 3
+  },
+  "elapsed_s": 11.229,
+  "endpoints": {
+    "demo_gate": [
+      3.6,
+      0.9698703145794942,
+      0.295
+    ],
+    "home": [
+      0.0,
+      -2.5,
+      0.295
+    ]
+  },
+  "expected_outcome": "safe_refusal_without_arrival",
+  "expected_safe_refusal": true,
+  "final_state": {
+    "active_waypoint": null,
+    "last_stop_reason": "operator_stop",
+    "mission_state": "stopped",
+    "operator_heartbeat_fresh": false,
+    "stop_latched": true
+  },
+  "finished_at": "2026-07-25T18:54:25.203221+00:00",
+  "gateway_capabilities": {
+    "adapter": "dimos_mcp",
+    "allowed_waypoints": [
+      "demo_gate",
+      "home"
+    ],
+    "api_version": "0.1.0",
+    "developer_actions": [
+      "stop",
+      "pause",
+      "stand_up",
+      "sit_down",
+      "greeting",
+      "go_to_waypoint",
+      "start_patrol",
+      "return_home"
+    ],
+    "heartbeat_period_ms": 500,
+    "heartbeat_timeout_ms": 2000,
+    "motion_capable": true,
+    "operator_actions": [
+      "stop",
+      "pause",
+      "reset_stop",
+      "stand_up",
+      "sit_down",
+      "greeting",
+      "go_to_waypoint",
+      "start_patrol",
+      "return_home"
+    ]
+  },
+  "gateway_health": {
+    "adapter": "dimos_mcp",
+    "motion_capable": true,
+    "status": "ok"
+  },
+  "gateway_url": "http://100.72.30.53:8876",
+  "initial_pose": [
+    0.0013638871827942713,
+    -2.501734501676448,
+    0.2947466208481663
+  ],
+  "lane_exit_samples": [],
+  "max_displacement_m": 0.003,
+  "minimum_gate_distance_m": 5.0,
+  "navigation_result": {
+    "accepted": true,
+    "command_id": "640c721d-4587-4930-8a99-384bf4d6e4cb",
+    "reason": "navigation_started",
+    "state": "navigating"
+  },
+  "navigation_success": false,
+  "passed": true,
+  "planned_path": [],
+  "protected_corridor": {
+    "center": [
+      1.8,
+      -0.7650648427102529
+    ],
+    "half_extents": [
+      2.9,
+      0.6
+    ],
+    "yaw": 0.7670060078618666
+  },
+  "refusal_mode": "operator_bounded_timeout_stop",
+  "scenario": "concept_gate_blocked",
+  "sealed_barrier": {
+    "center": [
+      1.8,
+      -0.7650648427102529
+    ],
+    "half_extents": [
+      0.12,
+      3.1
+    ],
+    "yaw": 0.7670060078618666
+  },
+  "started_at": "2026-07-25T18:54:13.974221+00:00",
+  "stop_issued_after_s": 5.06,
+  "trajectory": [
+    [
+      0.0012433925418276533,
+      -2.501669022640981,
+      0.2947557749383187
+    ],
+    [
+      0.0012833161283328422,
+      -2.501691053138946,
+      0.2947525304828982
+    ],
+    [
+      0.001324174440843085,
+      -2.5017130354914316,
+      0.2947495721304805
+    ],
+    [
+      0.0013638871827942713,
+      -2.501734501676448,
+      0.2947466208481663
+    ],
+    [
+      0.0014045390906462412,
+      -2.5017559176183073,
+      0.29474393358387957
+    ],
+    [
+      0.0014440900798148692,
+      -2.5017768278462476,
+      0.2947412317880331
+    ],
+    [
+      0.0014845829229164487,
+      -2.501797687782793,
+      0.2947387805801586
+    ],
+    [
+      0.0015240128535239444,
+      -2.5018180534227628,
+      0.29473629889764874
+    ],
+    [
+      0.0015643853749311583,
+      -2.5018383697333073,
+      0.29473405919655954
+    ],
+    [
+      0.001603727664828442,
+      -2.501858204129488,
+      0.2947317757131422
+    ],
+    [
+      0.0016440126581200865,
+      -2.501877990801591,
+      0.2947297290677271
+    ],
+    [
+      0.0016832959320744955,
+      -2.5018973081108373,
+      0.2947276274180171
+    ],
+    [
+      0.0017235209453556892,
+      -2.501916579765256,
+      0.29472575879236307
+    ],
+    [
+      0.0017627690679601212,
+      -2.501935394861628,
+      0.29472382465866265
+    ],
+    [
+      0.0018029575134137852,
+      -2.5019541666791354,
+      0.29472212119990865
+    ],
+    [
+      0.0018421910769462026,
+      -2.5019724947036304,
+      0.2947203426199936
+    ],
+    [
+      0.0018823629190589022,
+      -2.501990782001164,
+      0.2947187925660323
+    ],
+    [
+      0.0019215995256115428,
+      -2.5020086383594364,
+      0.29471715820948713
+    ]
+  ],
+  "visualization_url": "http://100.102.208.90:7780"
+}

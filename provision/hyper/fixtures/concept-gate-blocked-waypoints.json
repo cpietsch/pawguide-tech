@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "waypoints": {
+    "home": {
+      "position": [0.0, -2.5, 0.295],
+      "orientation": [0.0, 0.0, 0.0, 1.0]
+    },
+    "demo_gate": {
+      "position": [3.6, 0.9698703145794942, 0.295],
+      "orientation": [0.0, 0.0, 0.0, 1.0]
+    }
+  }
+}

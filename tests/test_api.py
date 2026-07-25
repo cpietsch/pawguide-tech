@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 
 from httpx import ASGITransport, AsyncClient
 import pytest
@@ -190,3 +191,42 @@ def test_real_adapter_requires_an_explicit_motion_gate(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="PAWGUIDE_ENABLE_REAL_MOTION=YES"):
         create_app()
+
+
+def test_watchdog_runs_while_api_event_loop_is_blocked() -> None:
+    supervisor = SafetySupervisor(
+        MockRobotAdapter(),
+        SupervisorConfig(
+            allowed_waypoints=frozenset({"home"}),
+            operator_heartbeat_timeout_s=0.05,
+        ),
+    )
+    app = create_app(
+        supervisor=supervisor,
+        operator_token="operator-token",
+        dev_token="dev-token",
+    )
+
+    async def exercise_watchdog() -> None:
+        async with app.router.lifespan_context(app):
+            supervisor.heartbeat()
+            from pawguide.models import Action, CommandEnvelope
+            from uuid import uuid4
+
+            result = supervisor.submit(
+                CommandEnvelope(
+                    command_id=uuid4(),
+                    action=Action.RESET_STOP,
+                    arguments={},
+                )
+            )
+            assert result.accepted is True
+
+            # A synchronous adapter or handler can block FastAPI's event loop.
+            # The safety watchdog must continue independently.
+            time.sleep(0.2)
+            snapshot = supervisor.snapshot()
+            assert snapshot.stop_latched is True
+            assert snapshot.last_stop_reason == "operator_heartbeat_timeout"
+
+    asyncio.run(exercise_watchdog())

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "default": "engineering_short",
+  "fixtures": {
+    "engineering_short": {
+      "waypoint_file": "provision/hyper/fixtures/engineering-short-waypoints.json",
+      "blocked_lane": [[-0.9993774, 0.999136], [0.095598, 1.478714]],
+      "protected_lane": [[-0.9993774, 0.999136], [-0.75, 1.65], [-0.1, 1.85], [0.095598, 1.478714]]
+    },
+    "concept_gate": {
+      "waypoint_file": "provision/hyper/fixtures/concept-gate-waypoints.json",
+      "arena": [-0.4, 4.0, -2.9, 1.3698703145794942],
+      "protected_lane": [[0.0, -2.5], [3.6, 0.9698703145794942]],
+      "protected_lane_half_width_m": 0.3,
+      "obstacles": []
+    },
+    "concept_gate_blocked": {
+      "waypoint_file": "provision/hyper/fixtures/concept-gate-blocked-waypoints.json",
+      "arena": [-0.4, 4.0, -2.9, 1.3698703145794942],
+      "blocked_lane": [[0.0, -2.5], [3.6, 0.9698703145794942]],
+      "blocked_lane_half_width_m": 0.3,
+      "protected_lane": [[0.0, -2.5], [3.6, 0.9698703145794942]],
+      "protected_lane_half_width_m": 0.3,
+      "expected_outcome": "fail_closed_stop",
+      "bypass_route": null,
+      "obstacles": [
+        {
+          "name": "pawguide_concept_gate_blocking_wall",
+          "center": [1.8, -0.7650648427102529, 0.5],
+          "yaw_rad": 2.3377903346567632,
+          "half_extents": [3.1, 0.12, 0.5]
+        }
+      ]
+    }
+  }
+}

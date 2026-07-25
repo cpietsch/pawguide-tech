@@ -1,140 +1,132 @@
 # Simulated pre-hardware acceptance
 
-This gate validates the complete application path before the physical Go2 is
-available:
+This is the authoritative hardware-free qualification for the PawGuide concept.
+It exercises the real X5 fail-closed gateway, China relay, Hyper DimOS planner,
+MuJoCo scene, and live telemetry. It does **not** authorize physical Go2
+motion.
+
+## Qualified topology
 
 ```text
-operator heartbeat and command
+operator command and 500 ms heartbeat
   -> X5 fail-closed gateway :8876
   -> China MCP relay :9991
-  -> Hyper DimOS planner
-  -> MuJoCo proxy drive
-  -> live pose telemetry
-  -> X5 heartbeat-loss STOP
+  -> Hyper DimOS planner and MuJoCo
+  -> live pose and path telemetry
+  -> X5 watchdog and redundant STOP
 ```
 
-It does not certify physical locomotion, traction, onboard obstacle avoidance,
-the Go2 network link, battery telemetry, or an emergency stop under load.
+The selected clear fixture is `concept_gate`. It contains only the two exact
+show waypoints:
 
-## Scenario
+- `home = (0.0, -2.5, 0.295)`
+- `demo_gate = (3.6, 0.9698703145794942, 0.295)`
 
-Hyper stores two commissioned exact waypoints in
-`/var/lib/pawguide/waypoints.json`:
+Their planar separation is exactly 5.0 m. The protected arena is
+`x=-0.4..4.0, y=-2.9..1.3698703145794942`. The separate
+`concept_gate_blocked` fixture uses the same endpoints and seals the complete
+lane with a planner-visible and rendered wall; there is no simulated bypass.
+Fixture definitions are in `config/mujoco-fixtures.json`.
 
-- `home`: simulator startup position;
-- `demo_a`: approximately 1.2 metres from home.
+`DIMOS_MUJOCO_KINEMATIC_DRIVE=1` is an explicit simulator-only compatibility
+proxy. The upstream locomotion policy did not reliably turn the simulated
+body in this container, so the proxy integrates the planner's bounded planar
+commands while retaining the real mapping, planning, gateway, watchdog, and
+telemetry path. Never enable it for a physical robot.
 
-The target and thresholds used by automation are tracked in
-`config/simulation-acceptance.json`. Recommission the file and the saved
-waypoint together if the scene or start position changes.
+## Authoritative result
 
-The upstream Go1 ONNX locomotion policy receives planner commands but does not
-reliably turn the simulated body in this container. Hyper therefore sets
-`DIMOS_MUJOCO_KINEMATIC_DRIVE=1`. This opt-in MuJoCo-only proxy integrates
-planner velocity commands into a planar pose while keeping the sensor,
-mapping, planning, gateway and telemetry path real. It must never be enabled
-for the physical Go2 runtime.
+The consolidated report is
+`artifacts/concept-pre-hardware-acceptance.json`. It passed all four simulation
+gates on 2026-07-26:
 
-## Pass criteria
+| Gate | Result | Live evidence |
+| --- | --- | --- |
+| Complete show | PASS | 5 m outbound and return sequence in 66.128 s; stationary arrival and exact waypoint orientation at both ends; zero protected-corridor path or trajectory exits |
+| Sealed lane | PASS | Safe refusal in 11.229 s; no path, bypass, barrier crossing, or arrival claim; maximum displacement 0.003 m |
+| Failure matrix | PASS | Heartbeat-loss STOP observed in 1.609 s; stale reset, bad waypoint, raw velocity, role, idempotency, and no-auto-rearm checks passed |
+| Endurance | PASS | 50/50 consecutive legs, including heartbeat-loss injection on legs 10, 20, 30, 40, and 50; no service restart or observed resource degradation |
 
-`pawguide-acceptance` requires all of the following:
+Every gate ended in the same strong invariant: mission `stopped`, STOP latched,
+heartbeat stale, no active waypoint, and `last_stop_reason=operator_stop`.
+The report embeds SHA-256 references to each source artifact:
 
-1. Ten X5 simulation health requests report `dimos_mcp` and
-   `motion_capable=true`.
-2. Gateway health p95 latency is no more than 750 ms.
-3. `demo_a` is present in the X5 waypoint allowlist.
-4. The initial STOP dispatch succeeds.
-5. Live Socket.IO pose telemetry is present.
-6. A fresh operator heartbeat and explicit `reset_stop` arm the gateway.
-7. The waypoint command is accepted as `navigation_started`.
-8. The simulator moves at least 0.5 m and arrives within 0.2 m of `demo_a`.
-9. Removing the heartbeat latches STOP with
-   `operator_heartbeat_timeout` within three seconds.
-10. An unconditional final STOP succeeds and the final state is latched.
+- `artifacts/concept-show-acceptance.json`
+- `artifacts/concept-gate-blocked-acceptance.json`
+- `artifacts/concept-failure-matrix.json`
+- `artifacts/soak/arena-qualification-20260726/soak-report.json`
 
-An HTTP 200 or a `navigation_started` response alone is not a pass.
+An HTTP 200 or `navigation_started` response alone is never considered proof
+of arrival or gesture completion.
 
-## Run
+## Reproduce and consolidate
 
-The X5 must be online. Keep the operator token in its existing root-owned file
-or another protected local file:
+Keep the operator token outside the repository in a mode-600 file:
 
 ```bash
 export PAWGUIDE_OPERATOR_TOKEN_FILE=/secure/path/operator.token
-uv run pawguide-acceptance \
-  --report artifacts/pre-hardware-acceptance.json
+
+uv run pawguide-show-acceptance
+uv run pawguide-blocked-lane-acceptance
+uv run pawguide-failure-matrix-acceptance
+uv run pawguide-soak \
+  --config config/simulation-soak.json \
+  --artifact-dir artifacts/soak/arena-qualification-YYYYMMDD
+uv run pawguide-concept-suite
 ```
 
-The command exits non-zero on any failed gate and still attempts STOP in its
-`finally` path. Preserve the generated JSON as the timestamped evidence for a
-specific run.
+Fixture selection and restoration are operational steps documented in
+`docs/HYPER_SIMULATION.md`. Do not run the clear and blocked scenarios against
+the wrong fixture. Each runner attempts an unconditional STOP in its cleanup
+path and exits non-zero when a required gate fails.
 
-## Verified result
+The live operator view is:
 
-The full gate passed on 2026-07-25. The tracked evidence is
-`artifacts/pre-hardware-acceptance.json` with SHA-256:
+- command center: `http://100.102.208.90:7780/command-center`
+- full-screen 3D viewer:
+  `http://100.102.208.90:9879/?url=rerun%2Bhttp%3A%2F%2F100.102.208.90%3A9879%2Fproxy`
 
-```text
-cf972558bcbe999527b673416c3f479c7d4a203fd271f5e3b14f5318d21d3bff
-```
+The command center reads the consolidated artifact, not browser video. Rerun
+is the primary visualization, which avoids sending unnecessary rendered image
+frames through the China relay.
 
-All 19 checks passed. Gateway p95 latency was 43.27 ms, measured displacement
-was 1.068 m, and arrival error was 0.047 m. Heartbeat loss latched STOP with
-`operator_heartbeat_timeout`; the unconditional final STOP also passed. An
-independent state read finished `STOPPED`, with `stop_latched=true`, no active
-waypoint and a stale heartbeat.
+## Concept traceability
 
-## Obstacle and soak qualification
+The simulation now proves the motion and gateway parts of `concept.md`:
 
-The deterministic MuJoCo acceptance scene adds a physical wall across the
-commissioned `home` to `demo_a` route. The planner also receives the same
-static geometry in its simulation-only costmap, avoiding a startup race with
-incremental lidar mapping. The acceptance runner records the complete planned
-polyline and executed odometry trajectory. It requires:
+- exact `home` and `demo_gate` allowlisting, with arbitrary destinations and
+  raw velocity rejected;
+- explicit arm, stand, greeting dispatch, five-metre navigation, stationary
+  operator confirmation, farewell dispatch, return, sit, and final STOP;
+- a complete sequence below the two-minute hard limit;
+- commissioned endpoint position and orientation;
+- protected-lane containment and fail-closed behavior when that lane is
+  sealed;
+- local heartbeat loss, authorization, validation, retry/idempotency, and
+  endurance behavior.
 
-- a path at least 1.25 times the direct route with at least 0.5 m lateral
-  deviation;
-- no planned segment inside the wall plus the robot envelope (with one 5 cm
-  planning-grid tolerance);
-- no executed segment inside the physical wall plus the full 0.3 m robot
-  radius;
-- arrival, heartbeat-loss STOP, and the complete final STOP invariants.
+Gesture confirmations in this report are simulator telemetry/operator
+confirmations. They do not claim that a physical Go2 completed a sport action.
+Likewise, the concept's fixed Pixel introduction, coffee answer, gate message,
+and “Ready for the next traveler” state are specified deterministic product
+content, but live Pixel audio, app accessibility, ring BLE/audio/haptics, and
+cloud-independent interaction are integration gates, not locomotion claims.
 
-The passing live artifact is
-`artifacts/pre-hardware-obstacle-acceptance.json`. On 2026-07-26 it recorded a
-2.135 m path (1.638 times direct), 0.731 m maximum lateral deviation, 40
-collision-free trajectory samples, 0.187 m arrival error, and 96.53 ms gateway
-p95 latency. Its SHA-256 is:
+## Still pending before physical motion
 
-```text
-422aca2e42cf5c179a78407fccdd99087a0ff0a3da86be88d9842ab971548fae
-```
+The following require the actual equipment and venue and remain explicitly
+`pending_physical_hardware` in the aggregate report:
 
-`pawguide-soak` alternates `home` and `demo_a`, starts every leg from a verified
-endpoint and STOP latch, requires three fresh sustained-arrival samples, and
-returns to a verified STOP latch after every leg. Every tenth leg deliberately
-lets the heartbeat expire. A two-leg commissioning round trip passed in
-`artifacts/soak/commissioning-retry-20260726/`.
+1. Go2 supported-off-ground posture and bounded gesture tests.
+2. Go2 floor motion, measured stopping distance, and heartbeat-loss tests.
+3. RDK X5 mounting, power, cooling, strap, and cable retention.
+4. Final booth barriers, measured clearance, waypoint recording, and route
+   rehearsal.
+5. Ring mechanical load, entanglement, release, BLE, audio, and haptics.
+6. A dedicated operator and spotter with local STOP and a stationary fallback.
 
-This is commissioning evidence, not the final endurance gate. Final
-pre-hardware qualification still requires 50 consecutive legs (25 round
-trips), zero failures, and a separate loaded-resource observation.
-The commissioning aggregate report SHA-256 is:
-
-```text
-e3bd961b3565d60f14fa7ac4dda7a7ef63a49ede7a0d62e7ce52aaba7d4a71c7
-```
-
-## Concept traceability limits
-
-The current simulation route is a 1.2 m engineering fixture named `demo_a`.
-The showcase concept specifies an approximately 5 m protected lane and a
-waypoint named `demo_gate`. Before calling the complete showcase accepted, the
-simulation must be recommissioned with that geometry and exact allowlist, then
-run the full stand/greet/navigate/operator-confirm/return/sit/STOP sequence
-within the 120-second hard limit.
-
-The present wall test proves collision-free replanning in an open simulated
-area. The concept also calls for a blocked-lane test in which the robot stops
-rather than leaving the protected lane. That requires an explicit lane
-boundary model and remains a separate fail-closed scenario.
+Before the visitor experience is called complete, separately demonstrate the
+Pixel's fixed phrases and coffee response without any motion-state change,
+large accessible controls, ring/app fallback behavior, and deterministic STOP.
+Simulation qualification is evidence for those later checks; it is not a
+substitute for them.

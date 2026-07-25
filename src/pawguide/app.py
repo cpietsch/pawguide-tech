@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from enum import StrEnum
 import os
 from secrets import compare_digest
+import threading
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -102,20 +102,27 @@ def create_app(
     else:
         active_supervisor = supervisor
 
-    async def watchdog_loop() -> None:
-        while True:
+    watchdog_stop = threading.Event()
+
+    def watchdog_loop() -> None:
+        while not watchdog_stop.is_set():
             active_supervisor.check_watchdog()
-            await asyncio.sleep(0.1)
+            watchdog_stop.wait(0.05)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        task = asyncio.create_task(watchdog_loop(), name="pawguide-safety-watchdog")
+        watchdog_stop.clear()
+        watchdog = threading.Thread(
+            target=watchdog_loop,
+            name="pawguide-safety-watchdog",
+            daemon=True,
+        )
+        watchdog.start()
         try:
             yield
         finally:
-            task.cancel()
-            with suppress(asyncio.CancelledError):
-                await task
+            watchdog_stop.set()
+            watchdog.join(timeout=1)
 
     app = FastAPI(
         title="PawGuide Edge Safety Gateway",

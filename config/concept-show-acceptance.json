@@ -1,0 +1,43 @@
+{
+  "arrival_timeout_s": 50,
+  "endpoints": {
+    "demo_gate": {
+      "orientation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "position": [
+        3.6,
+        0.9698703145794942,
+        0.295
+      ]
+    },
+    "home": {
+      "orientation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "position": [
+        0.0,
+        -2.5,
+        0.295
+      ]
+    }
+  },
+  "final_stop_timeout_s": 3,
+  "max_show_duration_s": 120,
+  "maximum_route_distance_m": 5.5,
+  "minimum_route_distance_m": 4.5,
+  "orientation_tolerance_rad": 0.25,
+  "path_timeout_s": 5,
+  "position_tolerance_m": 0.2,
+  "protected_corridor_half_width_m": 0.3,
+  "protected_corridor_longitudinal_margin_m": 0.2,
+  "stationary_dwell_s": 1.0,
+  "stationary_samples": 3,
+  "stationary_step_m": 0.02
+}

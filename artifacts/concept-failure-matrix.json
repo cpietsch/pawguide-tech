@@ -1,0 +1,230 @@
+{
+  "artifact_schema_version": 1,
+  "checks": [
+    {
+      "detail": "{\"completed_legs\": 50, \"passed\": true, \"passed_legs\": 50, \"path\": \"artifacts/soak/arena-qualification-20260726/soak-report.json\", \"requested_legs\": 50, \"sha256\": \"3e49e75e5f6459ccb93a3d549c3386d1d8fa73a285abefbe25fc386b040a7564\"}",
+      "elapsed_ms": null,
+      "name": "soak_reference",
+      "passed": true
+    },
+    {
+      "detail": "{\"adapter\": \"dimos_mcp\", \"allowed_waypoints\": [\"demo_gate\", \"home\"], \"api_version\": \"0.1.0\", \"developer_actions\": [\"stop\", \"pause\", \"stand_up\", \"sit_down\", \"greeting\", \"go_to_waypoint\", \"start_patrol\", \"return_home\"], \"heartbeat_period_ms\": 500, \"heartbeat_timeout_ms\": 2000, \"motion_capable\": true, \"operator_actions\": [\"stop\", \"pause\", \"reset_stop\", \"stand_up\", \"sit_down\", \"greeting\", \"go_to_waypoint\", \"start_patrol\", \"return_home\"]}",
+      "elapsed_ms": null,
+      "name": "exact_waypoints",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"startup_fail_closed\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "startup_initial_stop_invariants",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"c5349f50-1d35-463f-925c-a0f9d5e201d8\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "initial_operator_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": false, \"command_id\": \"3ed183e0-0715-4d52-b3d3-d8787a3d9bcf\", \"reason\": \"fresh_operator_heartbeat_required\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "stale_heartbeat_reset_rejected",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"56e954fd-444a-4e9e-8a2d-2f4a51914afd\", \"reason\": \"stop_reset\", \"state\": \"idle\"}",
+      "elapsed_ms": null,
+      "name": "operator_arm",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": false, \"command_id\": \"0b4dfea7-2236-40ac-8fe3-8ad7076ba833\", \"reason\": \"waypoint_not_allowed\", \"state\": \"idle\"}",
+      "elapsed_ms": null,
+      "name": "unknown_waypoint_rejected",
+      "passed": true
+    },
+    {
+      "detail": "{\"body\": {\"detail\": [{\"ctx\": {\"expected\": \"'stop', 'pause', 'reset_stop', 'stand_up', 'sit_down', 'greeting', 'go_to_waypoint', 'start_patrol' or 'return_home'\"}, \"input\": \"raw_velocity\", \"loc\": [\"body\", \"action\"], \"msg\": \"Input should be 'stop', 'pause', 'reset_stop', 'stand_up', 'sit_down', 'greeting', 'go_to_waypoint', 'start_patrol' or 'return_home'\", \"type\": \"enum\"}]}, \"http_status\": 422}",
+      "elapsed_ms": null,
+      "name": "raw_action_http_validation_rejected",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_stop\", \"mission_state\": \"idle\", \"operator_heartbeat_fresh\": true, \"stop_latched\": false}",
+      "elapsed_ms": null,
+      "name": "validation_rejections_do_not_move",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"fc9727a1-b89f-43bf-9320-c7d75bee2661\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "operator_stop_accepted",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"abc55a66-6f30-480b-9048-1adb66d99af7\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "developer_stop_accepted",
+      "passed": true
+    },
+    {
+      "detail": "{\"body\": {\"detail\": \"Forbidden\"}, \"http_status\": 403}",
+      "elapsed_ms": null,
+      "name": "developer_reset_forbidden",
+      "passed": true
+    },
+    {
+      "detail": "{\"command_id\": \"2be74ef5-3d79-4564-b00c-eeeae1de377a\", \"first\": {\"accepted\": true, \"command_id\": \"2be74ef5-3d79-4564-b00c-eeeae1de377a\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}, \"first_elapsed_ms\": 701.237, \"second\": {\"accepted\": true, \"command_id\": \"2be74ef5-3d79-4564-b00c-eeeae1de377a\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}, \"second_elapsed_ms\": 23.292}",
+      "elapsed_ms": null,
+      "name": "duplicate_uuid_idempotent_result",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"93291985-9dd4-44b2-944a-5e5c0fdfedda\", \"reason\": \"stop_reset\", \"state\": \"idle\"}",
+      "elapsed_ms": null,
+      "name": "heartbeat_test_arm",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"50e88338-6d53-4ae5-8cc4-62cd5b92fb95\", \"reason\": \"navigation_started\", \"state\": \"navigating\"}",
+      "elapsed_ms": null,
+      "name": "heartbeat_test_navigation_active",
+      "passed": true
+    },
+    {
+      "detail": "no heartbeat errors",
+      "elapsed_ms": null,
+      "name": "heartbeat_worker_clean",
+      "passed": true
+    },
+    {
+      "detail": "{\"elapsed_s\": 1.609, \"state\": {\"active_waypoint\": null, \"last_stop_reason\": \"operator_heartbeat_timeout\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}}",
+      "elapsed_ms": null,
+      "name": "heartbeat_loss_navigation_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_heartbeat_timeout\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "no_auto_rearm",
+      "passed": true
+    },
+    {
+      "detail": "{\"accepted\": true, \"command_id\": \"819fb09b-8e9b-4d84-bf5e-6d69c68bca22\", \"reason\": \"stop_latched\", \"state\": \"stopped\"}",
+      "elapsed_ms": null,
+      "name": "final_operator_stop",
+      "passed": true
+    },
+    {
+      "detail": "{\"active_waypoint\": null, \"last_stop_reason\": \"operator_stop\", \"mission_state\": \"stopped\", \"operator_heartbeat_fresh\": false, \"stop_latched\": true}",
+      "elapsed_ms": null,
+      "name": "final_stop_invariants",
+      "passed": true
+    }
+  ],
+  "evidence": {
+    "developer_reset": {
+      "body": {
+        "detail": "Forbidden"
+      },
+      "http_status": 403
+    },
+    "duplicate_command": {
+      "command_id": "2be74ef5-3d79-4564-b00c-eeeae1de377a",
+      "first": {
+        "accepted": true,
+        "command_id": "2be74ef5-3d79-4564-b00c-eeeae1de377a",
+        "reason": "stop_latched",
+        "state": "stopped"
+      },
+      "first_elapsed_ms": 701.237,
+      "second": {
+        "accepted": true,
+        "command_id": "2be74ef5-3d79-4564-b00c-eeeae1de377a",
+        "reason": "stop_latched",
+        "state": "stopped"
+      },
+      "second_elapsed_ms": 23.292
+    },
+    "heartbeat_loss": {
+      "elapsed_s": 1.609,
+      "state": {
+        "active_waypoint": null,
+        "last_stop_reason": "operator_heartbeat_timeout",
+        "mission_state": "stopped",
+        "operator_heartbeat_fresh": false,
+        "stop_latched": true
+      }
+    },
+    "initial_stop": {
+      "accepted": true,
+      "command_id": "c5349f50-1d35-463f-925c-a0f9d5e201d8",
+      "reason": "stop_latched",
+      "state": "stopped"
+    },
+    "no_auto_rearm_state": {
+      "active_waypoint": null,
+      "last_stop_reason": "operator_heartbeat_timeout",
+      "mission_state": "stopped",
+      "operator_heartbeat_fresh": false,
+      "stop_latched": true
+    },
+    "raw_action": {
+      "body": {
+        "detail": [
+          {
+            "ctx": {
+              "expected": "'stop', 'pause', 'reset_stop', 'stand_up', 'sit_down', 'greeting', 'go_to_waypoint', 'start_patrol' or 'return_home'"
+            },
+            "input": "raw_velocity",
+            "loc": [
+              "body",
+              "action"
+            ],
+            "msg": "Input should be 'stop', 'pause', 'reset_stop', 'stand_up', 'sit_down', 'greeting', 'go_to_waypoint', 'start_patrol' or 'return_home'",
+            "type": "enum"
+          }
+        ]
+      },
+      "http_status": 422
+    },
+    "stale_reset": {
+      "accepted": false,
+      "command_id": "3ed183e0-0715-4d52-b3d3-d8787a3d9bcf",
+      "reason": "fresh_operator_heartbeat_required",
+      "state": "stopped"
+    },
+    "startup_state": {
+      "active_waypoint": null,
+      "last_stop_reason": "startup_fail_closed",
+      "mission_state": "stopped",
+      "operator_heartbeat_fresh": false,
+      "stop_latched": true
+    },
+    "unknown_waypoint": {
+      "accepted": false,
+      "command_id": "0b4dfea7-2236-40ac-8fe3-8ad7076ba833",
+      "reason": "waypoint_not_allowed",
+      "state": "idle"
+    }
+  },
+  "final_state": {
+    "active_waypoint": null,
+    "last_stop_reason": "operator_stop",
+    "mission_state": "stopped",
+    "operator_heartbeat_fresh": false,
+    "stop_latched": true
+  },
+  "finished_at": "2026-07-25T19:09:38.365915+00:00",
+  "gateway_url": "http://100.72.30.53:8876",
+  "passed": true,
+  "soak_reference": {
+    "completed_legs": 50,
+    "passed": true,
+    "passed_legs": 50,
+    "path": "artifacts/soak/arena-qualification-20260726/soak-report.json",
+    "requested_legs": 50,
+    "sha256": "3e49e75e5f6459ccb93a3d549c3386d1d8fa73a285abefbe25fc386b040a7564"
+  },
+  "started_at": "2026-07-25T19:09:30.836495+00:00"
+}

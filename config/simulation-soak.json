@@ -1,6 +1,7 @@
 {
   "arrival_timeout_s": 150,
   "arrival_tolerance_m": 0.2,
+  "destination_waypoint": "demo_a",
   "endpoint_tolerance_m": 0.25,
   "endpoints": {
     "demo_a": [

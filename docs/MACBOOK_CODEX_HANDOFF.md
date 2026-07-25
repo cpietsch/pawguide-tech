@@ -16,19 +16,25 @@ manual console -> X5 safety gateway -> DimOS MCP -> Go2 WebRTC
 
 ## Current status
 
-This handoff reflects the state on 2026-07-24:
+This handoff reflects the state on 2026-07-25:
 
 - The 64 GB microSD has already been flashed with the official RDK X5 Ubuntu
   22.04 server image. Do not reflash it unless first-boot diagnostics establish
   that the image is unusable.
 - The X5 has not yet been provisioned or verified on Tailscale.
-- The tested PawGuide bundle is ready on the Hetzner development server and
-  the China artifact mirror.
-- Mobile Codex remote control on Hetzner is stopped. Do not re-enable it for
-  this workflow.
+- The tested PawGuide bundle is ready on the China artifact mirror. Hetzner is
+  retained only as a recovery and cross-border egress host.
+- Codex is installed and authenticated on the China development server. Its
+  localhost-only Hysteria2 proxy is healthy; no Tailscale exit node is
+  selected.
 - On the Mac, use the current ChatGPT desktop app in **Codex** mode and connect
-  directly to the SSH host alias `hetzner`. Do not tunnel Codex through another
+  directly to the SSH host alias `china`. Do not tunnel Codex through another
   terminal session or through the mobile remote-control relay.
+
+> **Obsolete-path stop condition:** if a setup session asks the X5 to connect,
+> tunnel or copy credentials to `hetzner` or `2.28.11.114`, stop that step.
+> Resume from this handoff on the China Codex session. Hysteria2 terminates on
+> Hetzner for China-server Codex egress only; it is not an X5 dependency.
 
 ## Fixed decisions
 
@@ -42,7 +48,12 @@ This handoff reflects the state on 2026-07-24:
 - Go2 LocalAP address is `192.168.12.1`.
 - The old STA address `10.88.15.7` is not used in LocalAP mode.
 - Tailscale is for SSH, diagnostics and secondary STOP. Do not route Go2
-  WebRTC through Tailscale and do not select an exit node initially.
+  WebRTC through Tailscale and do not select an exit node on the X5.
+- The X5 never initiates a connection to Hetzner. After joining Tailscale,
+  management connections originate from the Mac or China server toward the
+  X5. Neither remote server owns the local safety heartbeat.
+- The China server is the primary development/control host. Hetzner is a
+  fallback only and must not become an X5 or Go2 runtime dependency.
 - Keep the X5 beside the robot for all initial tests. Do not mount the X5,
   Pixel or power bank yet.
 
@@ -54,10 +65,10 @@ Private source repository:
 https://github.com/cpietsch/pawguide
 ```
 
-The current handoff lives on:
+The canonical handoff lives on the default branch:
 
 ```text
-agent/macbook-codex-handoff
+main
 ```
 
 If the repository is not already present on the Mac:
@@ -65,26 +76,26 @@ If the repository is not already present on the Mac:
 ```bash
 gh repo clone cpietsch/pawguide ~/Code/pawguide
 cd ~/Code/pawguide
-git fetch origin
-git switch --track origin/agent/macbook-codex-handoff
+git switch main
+git pull --ff-only
 ```
 
-If the branch already exists locally:
+If the repository already exists locally:
 
 ```bash
 cd ~/Code/pawguide
 git fetch origin
-git switch agent/macbook-codex-handoff
+git switch main
 git pull --ff-only
 ```
 
-On the user's MacBook, the Hetzner development server is already configured in
-`~/.ssh/config` under the host alias `hetzner`. Use that alias instead of
+On the user's MacBook, the China development server is configured in
+`~/.ssh/config` under the host alias `china`. Use that alias instead of
 reconstructing its address, port or key settings:
 
 ```bash
-ssh hetzner
-scp hetzner:/root/pawguide/docs/MACBOOK_CODEX_HANDOFF.md .
+ssh china
+scp china:/root/pawguide/docs/MACBOOK_CODEX_HANDOFF.md .
 ```
 
 Do not modify the Mac's working SSH configuration unless the alias fails and
@@ -93,7 +104,7 @@ the user explicitly asks for it to be repaired.
 In the current ChatGPT desktop app:
 
 1. Select **Codex** from the top-left product menu.
-2. Add or select the SSH connection named `hetzner`.
+2. Add or select the SSH connection named `china`.
 3. Open `/root/pawguide`.
 4. Start a new session with:
 
@@ -105,9 +116,11 @@ In the current ChatGPT desktop app:
    ```
 
 The ChatGPT desktop SSH connection is only the development/control surface for
-Hetzner. During X5 first boot, the Mac also needs a separate direct LAN SSH
-session to the X5. Once the X5 is on Tailscale, Hetzner may connect directly to
-it; the Mac must not remain an always-on tunnel or runtime dependency.
+the China server. During X5 first boot, the Mac also needs a separate direct
+LAN SSH session to the X5. Once the X5 is on Tailscale, the China server may
+connect directly to it; the Mac must not remain an always-on tunnel or runtime
+dependency. The connection direction is always Mac/China to X5—never X5 to
+Hetzner.
 
 The tested artifact corresponds to initial commit:
 
@@ -150,8 +163,9 @@ Expected:
 pawguide-x5-mvp.tar.gz: OK
 ```
 
-Do not use or copy the Hetzner server's SSH or GitHub credentials. Use the
-user's existing Mac credentials.
+Do not copy SSH, GitHub, Codex or proxy credentials from either development
+server to the Mac or X5. Use the user's existing Mac credentials and a
+dedicated X5/Tailscale enrollment path.
 
 ## Safety contract
 
@@ -329,11 +343,11 @@ tailscale ip -4
 tailscale status
 ```
 
-Report the X5 hostname `pawguide-x5` and its Tailscale IP to the existing
-Hetzner Codex session. Seeing the node in Tailscale is not sufficient proof of
-SSH access. Do not copy a private key from Hetzner or the Mac. The Hetzner
-session will provision a dedicated public key and verify the ACL/SSH path
-before taking over remote development.
+Report the X5 hostname `pawguide-x5` and its Tailscale IP to the existing China
+Codex session. Seeing the node in Tailscale is not sufficient proof of SSH
+access. The China session must verify the ACL/SSH path from China to X5 before
+taking over remote development. Do not configure an outbound SSH tunnel from
+the X5, and never copy a private key from China, Hetzner or the Mac.
 
 These installers must leave the physical DimOS service disabled and the
 gateway in mock mode. Verify without reading secret files:

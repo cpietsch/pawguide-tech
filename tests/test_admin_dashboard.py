@@ -61,6 +61,7 @@ def test_dashboard_exposes_live_3d_and_acceptance_evidence() -> None:
     assert 'data-action="greeting"' in html
     assert 'data-action="return_home"' in html
     assert 'data-action="go_to_waypoint"' in html
+    assert 'id="tag-waypoint-command"' in html
     assert 'data-checklist="robot"' in html
     assert 'data-checklist="venue"' in html
     assert "ENABLE PHYSICAL CONTROL" in html

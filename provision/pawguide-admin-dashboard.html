@@ -208,8 +208,9 @@
             <label for="waypoint-command">Exact waypoint</label>
             <select id="waypoint-command"></select>
             <button id="go-command" data-action="go_to_waypoint" type="button">Go to waypoint</button>
+            <button id="tag-waypoint-command" type="button">Record current pose</button>
           </div>
-          <p class="warning">Accepted means dispatched—not physically completed. Confirm posture and arrival visually before the next action.</p>
+          <p class="warning">Accepted means dispatched—not physically completed. Pose recording is physical-target only and requires a fresh heartbeat while STOP remains latched. Confirm posture and arrival visually before every action.</p>
         </div>
 
         <div class="tabs" role="tablist" aria-label="Commissioning checklists">

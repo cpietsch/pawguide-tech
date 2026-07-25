@@ -55,3 +55,22 @@ def test_manual_operator_is_part_of_the_edge_wheel() -> None:
 
     assert 'pawguide-operator = "pawguide.operator:main"' in pyproject
     assert "pawguide-operator" in readiness
+
+
+def test_x5_real_motion_requires_installed_physical_readiness_gate() -> None:
+    installer = (PROJECT / "provision/install-dimos-x5.sh").read_text()
+    enable = (PROJECT / "provision/enable-real-motion.sh").read_text()
+    readiness = (PROJECT / "provision/check-x5-readiness.sh").read_text()
+    patch = (PROJECT / "vendor/dimos-pawguide.patch").read_text()
+
+    for script in (
+        "check-x5-readiness.sh",
+        "configure-go2-ap.sh",
+        "install-robot-credential.sh",
+        "enable-real-motion.sh",
+        "disable-real-motion.sh",
+    ):
+        assert script in installer
+    assert "/opt/pawguide/bin/check-x5-readiness.sh --require-physical" in enable
+    assert '"${require_physical}" -eq 1' in readiness
+    assert '"pyyaml>=6.0.2"' in patch

@@ -3,6 +3,13 @@ set -u
 
 failures=0
 warnings=0
+require_physical=0
+if [[ "${1:-}" == "--require-physical" ]]; then
+  require_physical=1
+elif [[ -n "${1:-}" ]]; then
+  echo "Usage: $0 [--require-physical]" >&2
+  exit 2
+fi
 wifi_interface="${PAWGUIDE_WIFI_INTERFACE:-wlan0}"
 robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"
 
@@ -225,7 +232,11 @@ if [[ -f "${robot_secret}" ]]; then
     fail "robot credential must be mode 640 and root:pawguide"
   fi
 else
-  warn "robot credential is not installed; physical DimOS cannot start"
+  if [[ "${require_physical}" -eq 1 ]]; then
+    fail "robot credential is not installed; physical DimOS cannot start"
+  else
+    warn "robot credential is not installed; physical DimOS cannot start"
+  fi
 fi
 
 warn "software cannot validate the 5 V/5 A supply, cooling airflow, payload mass or connector retention"

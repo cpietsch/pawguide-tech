@@ -98,5 +98,6 @@ The future S100 artifact remains reproducible:
 - [X5 harness requirements](docs/MOUNTING_REQUIREMENTS.md)
 - [DimOS operations](docs/DIMOS_OPERATIONS.md)
 - [Hyper.ai Go2 simulation](docs/HYPER_SIMULATION.md)
+- [Physical Go2 handoff](docs/PHYSICAL_GO2_HANDOFF.md)
 - [S100 future deployment](docs/S100_DEPLOYMENT.md)
 - [S100 local-AI track](docs/S100_LOCAL_AI.md)

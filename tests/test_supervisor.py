@@ -129,6 +129,39 @@ def test_bounded_posture_and_greeting_actions_require_arming() -> None:
     ]
 
 
+def test_waypoint_tagging_requires_allowlist_fresh_heartbeat_and_latched_stop() -> None:
+    supervisor, adapter, _clock = make_supervisor()
+
+    try:
+        supervisor.tag_waypoint("demo_a")
+    except ValueError as exc:
+        assert str(exc) == "fresh_operator_heartbeat_required"
+    else:
+        raise AssertionError("stale tagging must fail")
+
+    supervisor.heartbeat()
+    assert "demo_a" in supervisor.tag_waypoint("demo_a")
+
+    arm(supervisor)
+    try:
+        supervisor.tag_waypoint("demo_a")
+    except ValueError as exc:
+        assert str(exc) == "stop_must_be_latched_for_waypoint_tagging"
+    else:
+        raise AssertionError("tagging with STOP released must fail")
+
+    supervisor.submit(command(Action.STOP))
+    supervisor.heartbeat()
+    try:
+        supervisor.tag_waypoint("outside_geofence")
+    except ValueError as exc:
+        assert str(exc) == "waypoint_not_allowed"
+    else:
+        raise AssertionError("non-allowlisted tagging must fail")
+
+    assert ("tag_waypoint", "demo_a") in adapter.calls
+
+
 def test_stop_is_latched_and_bypasses_mission_state() -> None:
     supervisor, adapter, _clock = make_supervisor()
     arm(supervisor)

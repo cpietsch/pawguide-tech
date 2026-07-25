@@ -275,6 +275,47 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "WaypointTagRequest": {
+        "additionalProperties": false,
+        "description": "Explicit human confirmation for a stationary commissioning write.",
+        "properties": {
+          "confirm_stationary": {
+            "const": true,
+            "title": "Confirm Stationary",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "confirm_stationary"
+        ],
+        "title": "WaypointTagRequest",
+        "type": "object"
+      },
+      "WaypointTagResult": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "stored": {
+            "const": true,
+            "default": true,
+            "title": "Stored",
+            "type": "boolean"
+          },
+          "waypoint_id": {
+            "title": "Waypoint Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "waypoint_id",
+          "detail"
+        ],
+        "title": "WaypointTagResult",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -372,6 +413,60 @@
           }
         ],
         "summary": "Command"
+      }
+    },
+    "/v1/commissioning/waypoints/{waypoint_id}": {
+      "post": {
+        "operationId": "tag_waypoint_v1_commissioning_waypoints__waypoint_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "waypoint_id",
+            "required": true,
+            "schema": {
+              "title": "Waypoint Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaypointTagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaypointTagResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tag Waypoint"
       }
     },
     "/v1/heartbeat": {

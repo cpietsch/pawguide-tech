@@ -326,6 +326,7 @@
       heartbeatTimer: null,
       heartbeat: false,
       physicalUnlocked: false,
+      stopLatched: null,
     };
     const byId = (id) => doc.querySelector(`#${id}`);
     const actionButtons = [...doc.querySelectorAll("[data-action]")];
@@ -385,6 +386,7 @@
         snapshot.operator_heartbeat_fresh ? "fresh" : state.heartbeat ? "starting" : "off";
       byId("control-mission").textContent = snapshot.mission_state || "—";
       byId("control-waypoint").textContent = snapshot.active_waypoint || "—";
+      state.stopLatched = snapshot.stop_latched === true;
     }
 
     function renderControls() {
@@ -408,6 +410,11 @@
         !state.connected || (physical && !state.physicalUnlocked);
       byId("stop-command").disabled =
         !state.connected || !token();
+      byId("tag-waypoint-command").disabled = !(
+        enabled
+        && physical
+        && state.stopLatched === true
+      );
     }
 
     async function refreshState() {
@@ -509,6 +516,29 @@
       return result;
     }
 
+    async function tagWaypoint() {
+      if (
+        target() !== "physical"
+        || !state.physicalUnlocked
+        || !state.heartbeat
+        || state.stopLatched !== true
+      ) {
+        throw new Error(
+          "physical target, unlock, fresh heartbeat, and latched STOP are required"
+        );
+      }
+      const waypointId = byId("waypoint-command").value;
+      const result = await request(
+        `/v1/commissioning/waypoints/${encodeURIComponent(waypointId)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({ confirm_stationary: true }),
+        }
+      );
+      log(`Recorded exact waypoint ${waypointId}`, result.detail);
+      return result;
+    }
+
     function unlockPhysical() {
       state.physicalUnlocked =
         byId("physical-confirmation").value === PHYSICAL_UNLOCK_PHRASE;
@@ -563,6 +593,9 @@
         waypoint_id: byId("waypoint-command").value,
       }).catch((error) => log("Waypoint command failed", error.message))
     );
+    byId("tag-waypoint-command").addEventListener("click", () =>
+      tagWaypoint().catch((error) => log("Waypoint recording failed", error.message))
+    );
     actionButtons
       .filter((button) => button.id !== "go-command")
       .forEach((button) => {
@@ -595,7 +628,14 @@
     initializeChecklists();
     renderControls();
 
-    return { state, connect, sendCommand, stopHeartbeat, refreshState };
+    return {
+      state,
+      connect,
+      sendCommand,
+      tagWaypoint,
+      stopHeartbeat,
+      refreshState,
+    };
   }
 
   const api = {

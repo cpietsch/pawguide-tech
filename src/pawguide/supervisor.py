@@ -91,6 +91,18 @@ class SafetySupervisor:
             self._latch_stop("operator_heartbeat_timeout")
         return self.snapshot()
 
+    def tag_waypoint(self, waypoint_id: str) -> str:
+        """Store an allowlisted pose only under a fresh, latched-STOP lease."""
+        with self._mission_lock:
+            with self._lock:
+                if waypoint_id not in self._config.allowed_waypoints:
+                    raise ValueError("waypoint_not_allowed")
+                if not self._stop_latched:
+                    raise ValueError("stop_must_be_latched_for_waypoint_tagging")
+                if not self._heartbeat_fresh():
+                    raise ValueError("fresh_operator_heartbeat_required")
+            return self._adapter.tag_waypoint(waypoint_id)
+
     def submit(self, command: CommandEnvelope) -> CommandResult:
         if command.action is Action.STOP:
             with self._lock:

@@ -61,6 +61,22 @@ class Heartbeat(BaseModel):
     source: str = Field(min_length=1, max_length=64)
 
 
+class WaypointTagRequest(BaseModel):
+    """Explicit human confirmation for a stationary commissioning write."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    confirm_stationary: Literal[True]
+
+
+class WaypointTagResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    waypoint_id: str
+    stored: Literal[True] = True
+    detail: str
+
+
 class SupervisorSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

@@ -1795,7 +1795,7 @@ diff --git a/pyproject.toml b/pyproject.toml
 index 0eeb509..b3739b0 100644
 --- a/pyproject.toml
 +++ b/pyproject.toml
-@@ -254,6 +254,15 @@ unitree = [
+@@ -254,6 +254,16 @@ unitree = [
      "unitree-webrtc-connect>=2.1.2",
  ]
 
@@ -1805,6 +1805,7 @@ index 0eeb509..b3739b0 100644
 +pawguide-edge = [
 +    "dimos[web,mapping]",
 +    "matplotlib>=3.7.1",
++    "pyyaml>=6.0.2",
 +    "unitree-webrtc-connect>=2.1.2",
 +]
 +

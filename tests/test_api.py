@@ -116,6 +116,40 @@ def test_dev_client_cannot_heartbeat_or_release_stop() -> None:
     asyncio.run(exercise_api())
 
 
+def test_operator_can_tag_exact_waypoint_only_while_stop_is_latched() -> None:
+    async def scenario() -> None:
+        app, _supervisor = make_app()
+        async with app.router.lifespan_context(app):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="http://test",
+                headers={"Authorization": "Bearer operator-token"},
+            ) as client:
+                await client.post(
+                    "/v1/heartbeat",
+                    json={"source": "commissioning-test"},
+                )
+                tagged = await client.post(
+                    "/v1/commissioning/waypoints/home",
+                    json={"confirm_stationary": True},
+                )
+                denied_confirmation = await client.post(
+                    "/v1/commissioning/waypoints/home",
+                    json={"confirm_stationary": False},
+                )
+                denied_waypoint = await client.post(
+                    "/v1/commissioning/waypoints/not-allowed",
+                    json={"confirm_stationary": True},
+                )
+
+                assert tagged.status_code == 200
+                assert tagged.json()["stored"] is True
+                assert denied_confirmation.status_code == 422
+                assert denied_waypoint.status_code == 409
+
+    asyncio.run(scenario())
+
+
 def test_operator_arms_locally_before_dev_starts_a_mission() -> None:
     app, _supervisor = make_app()
 

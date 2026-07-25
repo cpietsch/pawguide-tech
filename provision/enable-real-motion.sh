@@ -41,6 +41,14 @@ if ! ping -c 1 -W 2 192.168.12.1 >/dev/null 2>&1; then
   echo "The Go2 AP is not reachable at 192.168.12.1." >&2
   exit 1
 fi
+if [[ ! -x /opt/pawguide/bin/check-x5-readiness.sh ]]; then
+  echo "The installed X5 readiness gate is missing." >&2
+  exit 1
+fi
+if ! /opt/pawguide/bin/check-x5-readiness.sh --require-physical; then
+  echo "Physical readiness failed; real motion remains disabled." >&2
+  exit 1
+fi
 
 systemctl enable --now pawguide-dimos.service
 dim_os_ready=0

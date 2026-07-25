@@ -23,6 +23,8 @@ from pawguide.models import (
     GatewayHealth,
     Heartbeat,
     SupervisorSnapshot,
+    WaypointTagRequest,
+    WaypointTagResult,
 )
 from pawguide.secrets import read_secret
 from pawguide.supervisor import SafetySupervisor, SupervisorConfig
@@ -212,6 +214,29 @@ def create_app(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(exc),
             ) from exc
+
+    @app.post(
+        "/v1/commissioning/waypoints/{waypoint_id}",
+        dependencies=[Depends(require_operator)],
+        response_model=WaypointTagResult,
+    )
+    def tag_waypoint(
+        waypoint_id: str,
+        _confirmation: WaypointTagRequest,
+    ) -> WaypointTagResult:
+        try:
+            detail = active_supervisor.tag_waypoint(waypoint_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="waypoint_tagging_failed",
+            ) from exc
+        return WaypointTagResult(waypoint_id=waypoint_id, detail=detail)
 
     return app
 

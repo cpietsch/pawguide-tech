@@ -114,6 +114,19 @@ install \
   -m 0755 \
   "${script_dir}/check-dimos-tools.py" \
   /opt/pawguide/bin/check-dimos-tools.py
+for commissioning_script in \
+  check-x5-readiness.sh \
+  configure-go2-ap.sh \
+  install-robot-credential.sh \
+  enable-real-motion.sh \
+  disable-real-motion.sh; do
+  install \
+    -o root \
+    -g root \
+    -m 0755 \
+    "${script_dir}/${commissioning_script}" \
+    "/opt/pawguide/bin/${commissioning_script}"
+done
 install \
   -o root \
   -g root \

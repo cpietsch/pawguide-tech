@@ -31,6 +31,8 @@ class RobotAdapter(Protocol):
 
     def return_home(self) -> None: ...
 
+    def tag_waypoint(self, waypoint_id: str) -> str: ...
+
 
 @dataclass
 class MockRobotAdapter:
@@ -61,6 +63,10 @@ class MockRobotAdapter:
 
     def return_home(self) -> None:
         self.calls.append(("return_home", None))
+
+    def tag_waypoint(self, waypoint_id: str) -> str:
+        self.calls.append(("tag_waypoint", waypoint_id))
+        return f"Tagged exact waypoint '{waypoint_id}'."
 
 
 class DimOSMcpError(RuntimeError):
@@ -126,6 +132,9 @@ class DimOSMcpAdapter:
 
     def return_home(self) -> None:
         self.go_to_waypoint("home")
+
+    def tag_waypoint(self, waypoint_id: str) -> str:
+        return self._call_tool("tag_location", {"waypoint_id": waypoint_id})
 
     def _call_tool(self, name: str, arguments: dict[str, object]) -> str:
         response = self._client.post(

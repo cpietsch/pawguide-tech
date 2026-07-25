@@ -27,6 +27,21 @@ process.stdout.write(JSON.stringify(normalized));
     return json.loads(result.stdout)
 
 
+def _run_control(expression: str) -> object:
+    program = f"""
+const ui = require(process.argv[1]);
+const result = {expression};
+process.stdout.write(JSON.stringify(result));
+"""
+    result = subprocess.run(
+        ["node", "-e", program, str(SCRIPT)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(result.stdout)
+
+
 def test_dashboard_exposes_live_3d_and_acceptance_evidence() -> None:
     html = DASHBOARD.read_text(encoding="utf-8")
 
@@ -37,13 +52,75 @@ def test_dashboard_exposes_live_3d_and_acceptance_evidence() -> None:
     assert 'id="acceptance-elapsed"' in html
     assert 'id="safety-state"' in html
     assert 'id="evidence-list"' in html
+    assert 'id="control-center"' in html
+    assert 'id="stop-command"' in html
+    assert 'id="heartbeat-command"' in html
+    assert 'id="arm-command"' in html
+    assert 'data-action="stand_up"' in html
+    assert 'data-action="sit_down"' in html
+    assert 'data-action="greeting"' in html
+    assert 'data-action="return_home"' in html
+    assert 'data-action="go_to_waypoint"' in html
+    assert 'data-checklist="robot"' in html
+    assert 'data-checklist="venue"' in html
+    assert "ENABLE PHYSICAL CONTROL" in html
     assert 'src="/admin/dashboard.js"' in html
 
     nginx = NGINX.read_text(encoding="utf-8")
     assert "location = /admin/dashboard.js" in nginx
     assert "alias /var/www/pawguide/dashboard.js;" in nginx
+    assert "location = /command-center" in nginx
     assert "location = /admin/status/acceptance" in nginx
     assert "alias /var/www/pawguide/acceptance.json;" in nginx
+    assert "location /admin/api/sim/" in nginx
+    assert "proxy_pass http://100.72.30.53:8876/;" in nginx
+    assert "location /admin/api/physical/" in nginx
+    assert "proxy_pass http://100.72.30.53:8765/;" in nginx
+    assert "proxy_set_header Authorization $http_authorization;" in nginx
+
+
+def test_control_center_generates_only_allowlisted_command_envelopes() -> None:
+    envelope = _run_control(
+        'ui.commandEnvelope("go_to_waypoint", '
+        '{waypoint_id: "demo_gate"}, "00000000-0000-4000-8000-000000000001")'
+    )
+
+    assert envelope == {
+        "command_id": "00000000-0000-4000-8000-000000000001",
+        "action": "go_to_waypoint",
+        "arguments": {"waypoint_id": "demo_gate"},
+    }
+
+
+def test_motion_controls_require_heartbeat_and_physical_unlock() -> None:
+    assert (
+        _run_control(
+            "ui.mayDispatch({connected:true, heartbeat:true, "
+            "physical:false, physicalUnlocked:false})"
+        )
+        is True
+    )
+    assert (
+        _run_control(
+            "ui.mayDispatch({connected:true, heartbeat:false, "
+            "physical:false, physicalUnlocked:false})"
+        )
+        is False
+    )
+    assert (
+        _run_control(
+            "ui.mayDispatch({connected:true, heartbeat:true, "
+            "physical:true, physicalUnlocked:false})"
+        )
+        is False
+    )
+    assert (
+        _run_control(
+            "ui.mayDispatch({connected:true, heartbeat:true, "
+            "physical:true, physicalUnlocked:true})"
+        )
+        is True
+    )
 
 
 def test_running_soak_artifact_shows_progress_elapsed_and_safe_stop() -> None:

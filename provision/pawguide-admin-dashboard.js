@@ -293,3 +293,324 @@
     setInterval(refreshAcceptance, 5000);
   }
 })(typeof window !== "undefined" ? window : globalThis);
+
+(function (root) {
+  "use strict";
+
+  const TARGETS = Object.freeze({
+    sim: "/admin/api/sim",
+    physical: "/admin/api/physical",
+  });
+  const PHYSICAL_UNLOCK_PHRASE = "ENABLE PHYSICAL CONTROL";
+
+  function commandEnvelope(action, argumentsValue = {}, commandId) {
+    return {
+      command_id: commandId || crypto.randomUUID(),
+      action,
+      arguments: argumentsValue,
+    };
+  }
+
+  function mayDispatch({ connected, heartbeat, physical, physicalUnlocked }) {
+    return Boolean(
+      connected
+      && heartbeat
+      && (!physical || physicalUnlocked)
+    );
+  }
+
+  function createControlCenter(doc, storage = root.localStorage) {
+    const state = {
+      connected: false,
+      capabilities: null,
+      heartbeatTimer: null,
+      heartbeat: false,
+      physicalUnlocked: false,
+    };
+    const byId = (id) => doc.querySelector(`#${id}`);
+    const actionButtons = [...doc.querySelectorAll("[data-action]")];
+
+    function target() {
+      return byId("gateway-target").value;
+    }
+
+    function baseUrl() {
+      return TARGETS[target()];
+    }
+
+    function token() {
+      return byId("operator-token").value.trim();
+    }
+
+    function log(message, detail) {
+      const output = byId("command-log");
+      const stamp = new Date().toLocaleTimeString();
+      const suffix = detail === undefined
+        ? ""
+        : ` ${typeof detail === "string" ? detail : JSON.stringify(detail)}`;
+      output.textContent = `[${stamp}] ${message}${suffix}\n${output.textContent}`
+        .slice(0, 8000);
+    }
+
+    async function request(path, options = {}) {
+      if (!token()) throw new Error("operator token required");
+      const response = await fetch(`${baseUrl()}${path}`, {
+        cache: "no-store",
+        ...options,
+        headers: {
+          Authorization: `Bearer ${token()}`,
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...(options.headers || {}),
+        },
+      });
+      let body = null;
+      try {
+        body = await response.json();
+      } catch (_) {
+        body = { detail: `HTTP ${response.status}` };
+      }
+      if (!response.ok) {
+        const reason = typeof body.detail === "string"
+          ? body.detail
+          : JSON.stringify(body);
+        throw new Error(`${response.status}: ${reason}`);
+      }
+      return body;
+    }
+
+    function renderState(snapshot) {
+      if (!snapshot) return;
+      byId("control-stop").textContent = snapshot.stop_latched ? "LATCHED" : "released";
+      byId("control-heartbeat").textContent =
+        snapshot.operator_heartbeat_fresh ? "fresh" : state.heartbeat ? "starting" : "off";
+      byId("control-mission").textContent = snapshot.mission_state || "—";
+      byId("control-waypoint").textContent = snapshot.active_waypoint || "—";
+    }
+
+    function renderControls() {
+      const physical = target() === "physical";
+      byId("physical-lock").hidden = !physical;
+      byId("heartbeat-command").textContent =
+        state.heartbeat ? "Stop heartbeat" : "Start heartbeat";
+      byId("control-connection").textContent =
+        state.connected ? "connected" : "disconnected";
+      const enabled = mayDispatch({
+        connected: state.connected,
+        heartbeat: state.heartbeat,
+        physical,
+        physicalUnlocked: state.physicalUnlocked,
+      });
+      actionButtons.forEach((button) => {
+        button.disabled = !enabled;
+      });
+      byId("arm-command").disabled = !enabled;
+      byId("heartbeat-command").disabled =
+        !state.connected || (physical && !state.physicalUnlocked);
+      byId("stop-command").disabled =
+        !state.connected || !token();
+    }
+
+    async function refreshState() {
+      const snapshot = await request("/v1/state");
+      renderState(snapshot);
+      return snapshot;
+    }
+
+    async function connect() {
+      stopHeartbeat(false);
+      state.connected = false;
+      state.physicalUnlocked = false;
+      renderControls();
+      try {
+        const [capabilities, snapshot] = await Promise.all([
+          request("/v1/capabilities"),
+          request("/v1/state"),
+        ]);
+        state.capabilities = capabilities;
+        state.connected = true;
+        byId("control-adapter").textContent =
+          `${capabilities.adapter}${capabilities.motion_capable ? " · motion" : " · no motion"}`;
+        const waypoint = byId("waypoint-command");
+        waypoint.replaceChildren();
+        capabilities.allowed_waypoints.forEach((name) => {
+          const option = doc.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          waypoint.appendChild(option);
+        });
+        renderState(snapshot);
+        log(`Connected to ${target()} gateway`, {
+          adapter: capabilities.adapter,
+          motion_capable: capabilities.motion_capable,
+          waypoints: capabilities.allowed_waypoints,
+        });
+      } catch (error) {
+        byId("control-adapter").textContent = "—";
+        log("Connection failed", error.message);
+      }
+      renderControls();
+    }
+
+    async function heartbeatOnce() {
+      try {
+        const snapshot = await request("/v1/heartbeat", {
+          method: "POST",
+          body: JSON.stringify({ source: "tailscale-admin-control-center" }),
+        });
+        renderState(snapshot);
+      } catch (error) {
+        log("Heartbeat failed; lease stopped", error.message);
+        stopHeartbeat(false);
+      }
+    }
+
+    function stopHeartbeat(writeLog = true) {
+      if (state.heartbeatTimer !== null) {
+        root.clearInterval(state.heartbeatTimer);
+        state.heartbeatTimer = null;
+      }
+      const wasActive = state.heartbeat;
+      state.heartbeat = false;
+      if (writeLog && wasActive) {
+        log("Heartbeat stopped; gateway watchdog will latch STOP");
+      }
+      renderControls();
+    }
+
+    async function toggleHeartbeat() {
+      if (state.heartbeat) {
+        stopHeartbeat();
+        return;
+      }
+      state.heartbeat = true;
+      await heartbeatOnce();
+      if (!state.heartbeat) return;
+      state.heartbeatTimer = root.setInterval(heartbeatOnce, 500);
+      log("Operator heartbeat started at 500 ms");
+      renderControls();
+    }
+
+    async function sendCommand(action, argumentsValue = {}) {
+      if (action !== "stop" && !mayDispatch({
+        connected: state.connected,
+        heartbeat: state.heartbeat,
+        physical: target() === "physical",
+        physicalUnlocked: state.physicalUnlocked,
+      })) {
+        throw new Error("start the heartbeat and unlock the selected target first");
+      }
+      const result = await request("/v1/commands", {
+        method: "POST",
+        body: JSON.stringify(commandEnvelope(action, argumentsValue)),
+      });
+      log(`${action}: ${result.accepted ? "accepted" : "rejected"}`, result.reason);
+      if (action === "stop") stopHeartbeat(false);
+      await refreshState();
+      return result;
+    }
+
+    function unlockPhysical() {
+      state.physicalUnlocked =
+        byId("physical-confirmation").value === PHYSICAL_UNLOCK_PHRASE;
+      log(
+        state.physicalUnlocked
+          ? "Physical target unlocked for this browser tab"
+          : "Physical unlock phrase did not match"
+      );
+      renderControls();
+    }
+
+    function initializeChecklists() {
+      doc.querySelectorAll("[data-checklist]").forEach((list) => {
+        const name = list.dataset.checklist;
+        const boxes = [...list.querySelectorAll('input[type="checkbox"]')];
+        let saved = {};
+        try {
+          saved = JSON.parse(storage.getItem(`pawguide-checklist-${name}`) || "{}");
+        } catch (_) {
+          saved = {};
+        }
+        const update = () => {
+          const values = Object.fromEntries(boxes.map((box) => [box.value, box.checked]));
+          storage.setItem(`pawguide-checklist-${name}`, JSON.stringify(values));
+          const complete = boxes.filter((box) => box.checked).length;
+          doc.querySelector(`[data-progress="${name}"]`).textContent =
+            `${complete}/${boxes.length} confirmed`;
+        };
+        boxes.forEach((box) => {
+          box.checked = saved[box.value] === true;
+          box.addEventListener("change", update);
+        });
+        update();
+      });
+    }
+
+    byId("connect-command").addEventListener("click", connect);
+    byId("refresh-command").addEventListener("click", () =>
+      refreshState().catch((error) => log("State refresh failed", error.message))
+    );
+    byId("heartbeat-command").addEventListener("click", () =>
+      toggleHeartbeat().catch((error) => log("Heartbeat failed", error.message))
+    );
+    byId("arm-command").addEventListener("click", () =>
+      sendCommand("reset_stop").catch((error) => log("Arm failed", error.message))
+    );
+    byId("stop-command").addEventListener("click", () =>
+      sendCommand("stop").catch((error) => log("STOP failed", error.message))
+    );
+    byId("go-command").addEventListener("click", () =>
+      sendCommand("go_to_waypoint", {
+        waypoint_id: byId("waypoint-command").value,
+      }).catch((error) => log("Waypoint command failed", error.message))
+    );
+    actionButtons
+      .filter((button) => button.id !== "go-command")
+      .forEach((button) => {
+        button.addEventListener("click", () =>
+          sendCommand(button.dataset.action)
+            .catch((error) => log(`${button.dataset.action} failed`, error.message))
+        );
+      });
+    byId("gateway-target").addEventListener("change", () => {
+      stopHeartbeat(false);
+      state.connected = false;
+      state.physicalUnlocked = false;
+      byId("physical-confirmation").value = "";
+      renderControls();
+      log(`Target changed to ${target()}; reconnect required`);
+    });
+    byId("operator-token").addEventListener("input", renderControls);
+    byId("unlock-physical").addEventListener("click", unlockPhysical);
+    doc.querySelectorAll('[role="tab"]').forEach((tab) => {
+      tab.addEventListener("click", () => {
+        doc.querySelectorAll('[role="tab"]').forEach((item) =>
+          item.setAttribute("aria-selected", String(item === tab))
+        );
+        doc.querySelectorAll(".tab-panel").forEach((panel) => {
+          panel.hidden = panel.id !== tab.dataset.tab;
+        });
+      });
+    });
+    root.addEventListener("pagehide", () => stopHeartbeat(false));
+    initializeChecklists();
+    renderControls();
+
+    return { state, connect, sendCommand, stopHeartbeat, refreshState };
+  }
+
+  const api = {
+    TARGETS,
+    PHYSICAL_UNLOCK_PHRASE,
+    commandEnvelope,
+    mayDispatch,
+    createControlCenter,
+  };
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { ...module.exports, ...api };
+  }
+  root.PawGuideControls = api;
+
+  if (typeof document !== "undefined") {
+    createControlCenter(document);
+  }
+})(typeof window !== "undefined" ? window : globalThis);

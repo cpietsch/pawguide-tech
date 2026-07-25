@@ -220,6 +220,26 @@ is `artifacts/concept-pre-hardware-acceptance.json`.
 
 ## Operations
 
+The Tailscale command center now includes a native developer/operator console
+beside the live Rerun view. It proxies the existing X5 API without storing
+credentials on the China server:
+
+- `/admin/api/sim/` forwards to the isolated simulation gateway on `:8876`;
+- `/admin/api/physical/` forwards to the physical/production gateway on
+  `:8765`;
+- the operator enters the existing operator token, which remains in browser
+  memory and is forwarded in the standard `Authorization` header;
+- simulation is the default target; selecting the physical gateway requires a
+  typed per-tab interlock before heartbeat, arming, or motion controls become
+  available;
+- STOP remains available once authenticated and connected, independent of the
+  heartbeat state.
+
+The console exposes only the gateway's bounded action allowlist and exact
+waypoints. It also contains persistent browser-local physical-Go2 and venue
+commissioning checklists. Checking a box records evidence status only; it does
+not arm the gateway or authorize motion.
+
 On Hyper:
 
 ```bash

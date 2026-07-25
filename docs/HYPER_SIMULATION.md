@@ -35,6 +35,7 @@ separate and must remain untouched.
 | --- | --- |
 | Hyper SSH | `ssh root@ssh.hyper.ai -p 31612` |
 | Command center | `http://100.102.208.90:7780/command-center` |
+| Live 3D viewer | `http://100.102.208.90:9879/?url=rerun%2Bhttp%3A%2F%2F100.102.208.90%3A9879%2Fproxy` |
 | Relayed DimOS MCP | `http://100.102.208.90:9991/mcp` |
 | X5 simulation gateway | `http://100.72.30.53:8876` |
 | X5 production mock gateway | `http://100.72.30.53:8765` |
@@ -65,17 +66,22 @@ The DimOS command is:
 /opt/pawguide-venv/bin/dimos \
   --transport zenoh \
   --simulation mujoco \
-  --mujoco-steps-per-frame 3 \
-  --viewer none \
+  --mujoco-steps-per-frame 5 \
+  --viewer rerun \
+  --rerun-open none \
+  --rerun-web \
+  --rerun-host 127.0.0.1 \
+  --memory-limit 4GB \
   --listen-host 127.0.0.1 \
   --mcp-port 9990 \
   run unitree-go2 unitree-skill-container paw-guide-waypoint-skill mcp-server
 ```
 
-The service sets `MUJOCO_GL=egl` and `PYOPENGL_PLATFORM=egl`. Its
-`LD_LIBRARY_PATH` includes the CUDA 13 and cuDNN wheel libraries in the
-environment. MuJoCo rendering loads NVIDIA EGL, ONNX Runtime uses the CUDA
-execution provider, and DimOS voxel mapping reports `CUDA:0`.
+The service runs MuJoCo under Xvfb because NVIDIA EGL starts but exits before
+publishing telemetry in the Hyper.ai container. Its `LD_LIBRARY_PATH` includes
+the CUDA 13 and cuDNN wheel libraries in the environment. ONNX Runtime uses
+the CUDA execution provider and DimOS voxel mapping reports `CUDA:0`; only
+MuJoCo rendering uses the software/Xvfb compatibility path.
 
 DimOS has undeclared runtime requirements that were needed during migration:
 
@@ -95,6 +101,8 @@ Systemd supervises `pawguide-hyper-tunnel.service`. It forwards:
 
 ```text
 127.0.0.1:17779       -> Hyper 127.0.0.1:7779
+127.0.0.1:9877        -> Hyper Rerun gRPC 127.0.0.1:9877
+127.0.0.1:9878        -> Hyper Rerun web 127.0.0.1:9878
 100.102.208.90:9991   -> Hyper 127.0.0.1:9991
 ```
 
@@ -170,9 +178,10 @@ systemctl status pawguide-sim-gateway.service
 systemctl status pawguide-gateway.service
 ```
 
-Live Rerun is intentionally disabled. Port 9879 is a stale compatibility
-listener and may return 502; the supported lightweight interface is the
-command center on port 7780.
+Live Rerun is served through the China server's same-origin mux on port 9879.
+The browser must use port 9879 for both the viewer document and the encoded
+`rerun+http://...:9879/proxy` data URL. Direct browser access to Hyper's 9877
+gRPC endpoint causes a cross-origin preflight failure.
 
 `observe` and simulated battery state may return `None`. Sport-command
 dispatch, MCP registration, command-center transport and the X5 safety path

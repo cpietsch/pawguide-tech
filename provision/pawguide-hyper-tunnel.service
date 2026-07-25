@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/ssh -i /root/.ssh/pawguide_gpu_server -p 31612 -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -L 127.0.0.1:17779:127.0.0.1:7779 -L 100.102.208.90:9991:127.0.0.1:9991 root@ssh.hyper.ai
+ExecStart=/usr/bin/ssh -i /root/.ssh/pawguide_gpu_server -p 31612 -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -L 127.0.0.1:17779:127.0.0.1:7779 -L 127.0.0.1:9877:127.0.0.1:9877 -L 127.0.0.1:9878:127.0.0.1:9878 -L 100.102.208.90:9991:127.0.0.1:9991 root@ssh.hyper.ai
 Restart=always
 RestartSec=3
 

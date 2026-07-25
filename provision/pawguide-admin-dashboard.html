@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PawGuide Simulation</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body, main { width: 100%; height: 100%; margin: 0; }
+    body { overflow: hidden; background: #0a0a0f; }
+    main { display: flex; }
+    iframe { border: 0; min-width: 0; }
+    #viewer { flex: 1 1 auto; }
+    #controls {
+      flex: 0 0 clamp(22rem, 30vw, 36rem);
+      border-left: 1px solid #303642;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <iframe id="viewer" title="Live 3D Rerun viewer"></iframe>
+    <iframe id="controls" src="/command-center" title="Robot controls"></iframe>
+  </main>
+  <script>
+    const viewerOrigin = `${location.protocol}//${location.hostname}:9879`;
+    const proxyUrl = `rerun+http://${location.hostname}:9879/proxy`;
+    document.querySelector("#viewer").src =
+      `${viewerOrigin}/?url=${encodeURIComponent(proxyUrl)}`;
+  </script>
+</body>
+</html>

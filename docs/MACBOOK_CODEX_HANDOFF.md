@@ -21,7 +21,21 @@ This handoff reflects the state on 2026-07-25:
 - The 64 GB microSD has already been flashed with the official RDK X5 Ubuntu
   22.04 server image. Do not reflash it unless first-boot diagnostics establish
   that the image is unusable.
-- The X5 has not yet been provisioned or verified on Tailscale.
+- The X5 is provisioned and reachable on Tailscale as `pawguide-x5`
+  (`100.72.30.53`). Its production mock gateway remains on port 8765.
+- An isolated simulation gateway is enabled on X5 port 8876. It keeps the
+  fail-closed safety contract while dispatching its allowlisted MCP calls to
+  the GPU simulator through a loopback relay.
+- The active hardware-free simulator has migrated to
+  `ssh root@ssh.hyper.ai -p 31612`. The Hyper.ai container runs DimOS, MuJoCo,
+  CUDA ONNX Runtime, the command center and MCP under runit supervision.
+- Hyper.ai has no `/dev/net/tun`. The China server therefore provides a
+  persistent SSH relay while preserving stable tailnet endpoints. The command
+  center is `http://100.102.208.90:7780/command-center`; MCP remains
+  `100.102.208.90:9991`.
+- The end-to-end simulation acceptance sequence
+  `STOP -> reset/arm -> hello -> STOP` passed. The X5 finished with STOP
+  latched and the production gateway was untouched.
 - The tested PawGuide bundle is ready on the China artifact mirror. Hetzner is
   retained only as a recovery and cross-border egress host.
 - Codex is installed and authenticated on the China development server. Its
@@ -30,6 +44,9 @@ This handoff reflects the state on 2026-07-25:
 - On the Mac, use the current ChatGPT desktop app in **Codex** mode and connect
   directly to the SSH host alias `china`. Do not tunnel Codex through another
   terminal session or through the mobile remote-control relay.
+
+The authoritative simulator operations record is
+[Hyper.ai Go2 simulation](HYPER_SIMULATION.md).
 
 > **Obsolete-path stop condition:** if a setup session asks the X5 to connect,
 > tunnel or copy credentials to `hetzner` or `2.28.11.114`, stop that step.

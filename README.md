@@ -26,6 +26,12 @@ Pixel USB tether -- RDK X5 -- Wi-Fi --> Go2 AP (192.168.12.1)
               local manual console
 ```
 
+While the physical Go2 is unavailable, the active hardware-free path runs
+DimOS and MuJoCo on a Hyper.ai GPU container. The China server provides stable
+tailnet ingress for its command center and MCP endpoint, and the isolated X5
+simulation gateway treats that endpoint as the robot. See
+[Hyper.ai Go2 simulation](docs/HYPER_SIMULATION.md).
+
 Only the X5 joins the Go2 access point and only the X5 opens a Unitree WebRTC
 session. The Pixel does not run an LLM in this test phase. It supplies an
 internet/Tailscale uplink over USB; an Ethernet uplink can be used on the bench.
@@ -91,5 +97,6 @@ The future S100 artifact remains reproducible:
 - [X5 installation and deployment](docs/MVP_DEPLOYMENT.md)
 - [X5 harness requirements](docs/MOUNTING_REQUIREMENTS.md)
 - [DimOS operations](docs/DIMOS_OPERATIONS.md)
+- [Hyper.ai Go2 simulation](docs/HYPER_SIMULATION.md)
 - [S100 future deployment](docs/S100_DEPLOYMENT.md)
 - [S100 local-AI track](docs/S100_LOCAL_AI.md)

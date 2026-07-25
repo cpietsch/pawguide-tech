@@ -1,0 +1,14 @@
+#!/bin/sh
+exec 2>&1
+export NO_PROXY=127.0.0.1,localhost
+export MUJOCO_GL=egl
+export PYOPENGL_PLATFORM=egl
+export LD_LIBRARY_PATH=/opt/pawguide-venv/lib/python3.12/site-packages/nvidia/cu13/lib:/opt/pawguide-venv/lib/python3.12/site-packages/nvidia/cudnn/lib
+exec /opt/pawguide-venv/bin/dimos \
+  --transport zenoh \
+  --simulation mujoco \
+  --mujoco-steps-per-frame 3 \
+  --viewer none \
+  --listen-host 127.0.0.1 \
+  --mcp-port 9990 \
+  run unitree-go2 unitree-skill-container paw-guide-waypoint-skill mcp-server

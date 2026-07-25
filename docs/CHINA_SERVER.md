@@ -2,9 +2,11 @@
 
 ## Role
 
-The Aliyun Hangzhou server is PawGuide's in-region development and integration
-node. It hosts the same authenticated HTTP gateway contract used by Hetzner and
-the physical X5, but it deliberately runs `MockRobotAdapter`:
+The Aliyun Hangzhou server is PawGuide's in-region development, integration and
+tailnet relay node. It hosts the same authenticated HTTP gateway contract used
+by Hetzner and the physical X5, but it deliberately runs `MockRobotAdapter`.
+During hardware-free testing it also relays command-center and MCP traffic to
+the Hyper.ai GPU simulator:
 
 ```text
 developer / prototype agent
@@ -13,13 +15,23 @@ developer / prototype agent
              |
 China gateway (mock, no motion)
 
+browser / X5 simulation gateway
+             |
+         Tailscale
+             |
+China nginx + persistent SSH tunnel
+             |
+Hyper.ai DimOS + MuJoCo
+
 Local heartbeat + X5 safety + DimOS + Go2 remain an edge-only runtime.
 ```
 
 The China server is suitable for API integration, local-agent experiments,
-artifact distribution and later in-region telemetry. It must never become the
-Go2 WebRTC peer or the source of the local safety heartbeat. Selecting the RDK
-X5 for the moving MVP does not change this boundary.
+artifact distribution, simulation relay and later in-region telemetry. It
+must never become the physical Go2 WebRTC peer or the source of the local
+safety heartbeat. Selecting the RDK X5 for the moving MVP does not change this
+boundary. See [Hyper.ai Go2 simulation](HYPER_SIMULATION.md) for the active
+simulation topology.
 
 ## Deployment
 
@@ -80,3 +92,5 @@ STOP. It cannot send the operator heartbeat or clear the fail-closed stop latch.
 - Deployments create immutable release directories and atomically update the
   `/opt/pawguide/current` and `/srv/pawguide/current` symlinks.
 - DimOS and raw Unitree WebRTC are not installed on this server.
+- The active simulator runs on Hyper.ai. The retained local DimOS environment
+  is rollback-only and is not an active service.

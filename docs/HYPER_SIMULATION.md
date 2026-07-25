@@ -83,6 +83,13 @@ the CUDA 13 and cuDNN wheel libraries in the environment. ONNX Runtime uses
 the CUDA execution provider and DimOS voxel mapping reports `CUDA:0`; only
 MuJoCo rendering uses the software/Xvfb compatibility path.
 
+The Hyper-only service also sets `DIMOS_MUJOCO_KINEMATIC_DRIVE=1`. The bundled
+Go1 ONNX locomotion policy did not reliably turn the simulated body even
+though the planner published correct angular commands. This explicit
+simulation proxy integrates planner velocity commands into the planar MuJoCo
+pose so the gateway, planner, mapping, collision scene and telemetry can be
+accepted end to end. Never enable it in a physical Go2 service.
+
 DimOS has undeclared runtime requirements that were needed during migration:
 
 - `torch`;
@@ -144,6 +151,10 @@ curl -fsS http://100.72.30.53:8765/health
 Expected adapters are `dimos_mcp` with motion capability on 8876 and `mock`
 without motion capability on 8765.
 
+The isolated simulation gateway sets `PAWGUIDE_DIMOS_MCP_TIMEOUT_S=15` because
+its loopback relay crosses China to Hyper and STOP deliberately invokes several
+DimOS cleanup tools. The physical gateway retains the five-second default.
+
 The migration acceptance sequence passed end to end:
 
 ```text
@@ -152,6 +163,10 @@ STOP -> reset/arm -> hello -> STOP
 
 The final state was `STOPPED`, `stop_latched=true`, with
 `last_stop_reason=operator_stop`.
+
+The stronger pre-hardware route gate is documented in
+`docs/PRE_HARDWARE_ACCEPTANCE.md`; its machine-readable evidence is
+`artifacts/pre-hardware-acceptance.json`.
 
 ## Operations
 

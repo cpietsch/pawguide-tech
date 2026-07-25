@@ -673,3 +673,43 @@ diff --git a/dimos/robot/unitree/go2/blueprints/basic/unitree_go2_basic.py b/dim
 +        "world/global_map": 1,
 +        "world/color_image": 4,
 +        "world/global_costmap": 1,
+diff --git a/dimos/simulation/mujoco/mujoco_process.py b/dimos/simulation/mujoco/mujoco_process.py
+--- a/dimos/simulation/mujoco/mujoco_process.py
++++ b/dimos/simulation/mujoco/mujoco_process.py
+@@ -18,0 +19,2 @@
++import math
++import os
+@@ -49,0 +52,19 @@
++def _apply_kinematic_drive(
++    model: mujoco.MjModel,
++    data: mujoco.MjData,
++    command: NDArray[Any],
++    dt: float,
++) -> None:
++    """Apply a deterministic planar proxy drive for acceptance testing."""
++    w, x, y, z = data.qpos[3:7]
++    yaw = math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
++    forward, left, angular = command
++    data.qpos[0] += (math.cos(yaw) * forward - math.sin(yaw) * left) * dt
++    data.qpos[1] += (math.sin(yaw) * forward + math.cos(yaw) * left) * dt
++    yaw += angular * dt
++    data.qpos[3:7] = [math.cos(yaw / 2), 0, 0, math.sin(yaw / 2)]
++    data.qvel[0:2] = 0
++    data.qvel[5] = 0
++    mujoco.mj_forward(model, data)
++
++
+@@ -131,0 +153 @@
++        last_drive_time = time.monotonic()
+@@ -143,0 +166,11 @@
++
++            if os.getenv("DIMOS_MUJOCO_KINEMATIC_DRIVE") == "1":
++                drive_time = time.monotonic()
++                drive_dt = min(drive_time - last_drive_time, 0.5)
++                last_drive_time = drive_time
++                _apply_kinematic_drive(
++                    model,
++                    data,
++                    controller.get_command(),
++                    drive_dt,
++                )

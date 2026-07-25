@@ -1,0 +1,12 @@
+{
+  "arrival_tolerance_m": 0.2,
+  "heartbeat_stop_deadline_s": 3.0,
+  "max_gateway_p95_ms": 750,
+  "minimum_displacement_m": 0.5,
+  "target_pose": [
+    0.09559794429598462,
+    1.4787140953595757,
+    0.2960792948100876
+  ],
+  "waypoint": "demo_a"
+}

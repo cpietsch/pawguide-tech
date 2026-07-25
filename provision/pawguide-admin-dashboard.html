@@ -6,18 +6,36 @@
   <title>PawGuide Simulation</title>
   <style>
     * { box-sizing: border-box; }
-    html, body, main { width: 100%; height: 100%; margin: 0; }
+    html, body { width: 100%; height: 100%; margin: 0; }
     body { overflow: hidden; background: #0a0a0f; }
-    main { display: flex; }
+    body { display: flex; flex-direction: column; color: #dce3ee; font: 13px system-ui; }
+    header {
+      height: 38px; flex: 0 0 38px; display: flex; align-items: center;
+      gap: 18px; padding: 0 14px; background: #111722;
+      border-bottom: 1px solid #303642;
+    }
+    main { display: flex; flex: 1 1 auto; min-height: 0; }
     iframe { border: 0; min-width: 0; }
     #viewer { flex: 1 1 auto; }
     #controls {
       flex: 0 0 clamp(22rem, 30vw, 36rem);
       border-left: 1px solid #303642;
     }
+    .status::before {
+      content: ""; display: inline-block; width: 8px; height: 8px;
+      margin-right: 6px; border-radius: 50%; background: #697386;
+    }
+    .status.ok::before { background: #42d392; }
+    .status.fail::before { background: #ff5d68; }
   </style>
 </head>
 <body>
+  <header>
+    <strong>Pre-hardware simulation</strong>
+    <span id="simulator" class="status">Simulator checking</span>
+    <span id="viewer-status" class="status">3D viewer checking</span>
+    <span id="x5" class="status">X5 checking</span>
+  </header>
   <main>
     <iframe id="viewer" title="Live 3D Rerun viewer"></iframe>
     <iframe id="controls" src="/command-center" title="Robot controls"></iframe>
@@ -27,6 +45,40 @@
     const proxyUrl = `rerun+http://${location.hostname}:9879/proxy`;
     document.querySelector("#viewer").src =
       `${viewerOrigin}/?url=${encodeURIComponent(proxyUrl)}`;
+
+    async function probe(id, path, label, validate, json = false) {
+      const node = document.querySelector(`#${id}`);
+      const started = performance.now();
+      try {
+        const response = await fetch(path, { cache: "no-store" });
+        const body = json ? await response.json() : await response.text();
+        if (!response.ok || !validate(body)) throw new Error("unhealthy");
+        node.className = "status ok";
+        node.textContent = `${label} ${Math.round(performance.now() - started)} ms`;
+      } catch (_) {
+        node.className = "status fail";
+        node.textContent = `${node.dataset.label || id} offline`;
+      }
+    }
+
+    function refreshStatus() {
+      probe("simulator", "/admin/status/simulator", "Simulator", body => body.startsWith("0{"));
+      probe("viewer-status", "/admin/status/viewer", "3D viewer", body => body.includes("re_viewer"));
+      probe(
+        "x5",
+        "/admin/status/x5",
+        "X5",
+        body => body.status === "ok"
+          && body.adapter === "dimos_mcp"
+          && body.motion_capable === true,
+        true
+      );
+    }
+    document.querySelector("#simulator").dataset.label = "Simulator";
+    document.querySelector("#viewer-status").dataset.label = "3D viewer";
+    document.querySelector("#x5").dataset.label = "X5";
+    refreshStatus();
+    setInterval(refreshStatus, 5000);
   </script>
 </body>
 </html>

@@ -11,6 +11,7 @@ dependencies = [
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
   "pydantic>=2.10,<3",
+  "python-socketio[client]>=5.11,<6",
   "uvicorn[standard]>=0.34,<1",
 ]
 
@@ -23,6 +24,7 @@ dev = [
 pawguide-gateway = "pawguide.app:main"
 pawguide-client = "pawguide.client:main"
 pawguide-operator = "pawguide.operator:main"
+pawguide-acceptance = "pawguide.acceptance:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pawguide"]

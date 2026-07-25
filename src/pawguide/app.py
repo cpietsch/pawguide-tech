@@ -65,7 +65,8 @@ def _supervisor_from_env() -> tuple[SafetySupervisor, str, bool]:
             os.getenv(
                 "PAWGUIDE_DIMOS_MCP_URL",
                 "http://127.0.0.1:9990/mcp",
-            )
+            ),
+            timeout_s=float(os.getenv("PAWGUIDE_DIMOS_MCP_TIMEOUT_S", "5")),
         )
         motion_capable = True
     else:

@@ -10,6 +10,8 @@ DASHBOARD = ROOT / "provision" / "pawguide-admin-dashboard.html"
 SCRIPT = ROOT / "provision" / "pawguide-admin-dashboard.js"
 NGINX = ROOT / "provision" / "pawguide-admin.nginx.conf"
 AUTH_INSTALLER = ROOT / "provision" / "install-admin-auth.sh"
+ADMIN_INSTALLER = ROOT / "provision" / "install-china-admin.sh"
+TOKEN_SYNC = ROOT / "provision" / "sync-x5-operator-token.sh"
 
 
 def _normalize(value: dict[str, object], now: str) -> dict[str, object]:
@@ -83,6 +85,15 @@ def test_dashboard_is_a_tokenless_physical_kiosk_controller() -> None:
     installer = AUTH_INSTALLER.read_text(encoding="utf-8")
     assert '${1:-/etc/pawguide/operator.token}' in installer
     assert "/etc/pawguide/nginx-operator-auth.conf" in installer
+
+    admin_installer = ADMIN_INSTALLER.read_text(encoding="utf-8")
+    assert "/var/www/pawguide/dashboard.html" in admin_installer
+    assert "/etc/nginx/sites-available/pawguide-admin" in admin_installer
+    assert "/etc/pawguide/x5-operator.token" in admin_installer
+
+    token_sync = TOKEN_SYNC.read_text(encoding="utf-8")
+    assert "sudo -n cat /etc/pawguide/operator.token" in token_sync
+    assert "nginx -t" in token_sync
 
 
 def test_control_center_generates_only_allowlisted_command_envelopes() -> None:

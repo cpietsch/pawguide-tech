@@ -1,0 +1,37 @@
+[Unit]
+Description=PawGuide isolated Go2 simulation safety gateway
+After=network-online.target tailscaled.service pawguide-sim-mcp-relay.service
+Wants=network-online.target
+Requires=pawguide-sim-mcp-relay.service
+
+[Service]
+Type=simple
+User=pawguide
+Group=pawguide
+WorkingDirectory=/var/lib/pawguide
+EnvironmentFile=/etc/pawguide/pawguide-sim.env
+Environment=NO_PROXY=127.0.0.1,localhost,100.102.208.90,100.72.30.53
+ExecStart=/opt/pawguide/.venv/bin/pawguide-gateway
+Restart=always
+RestartSec=1
+NoNewPrivileges=true
+CapabilityBoundingSet=
+LockPersonality=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+UMask=0077
+ReadWritePaths=/var/lib/pawguide
+
+[Install]
+WantedBy=multi-user.target

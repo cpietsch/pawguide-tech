@@ -1,5 +1,9 @@
 # China development server
 
+The current admin/nginx and X5-token recovery procedure is in
+[CURRENT_RECOVERY_RUNBOOK.md](CURRENT_RECOVERY_RUNBOOK.md). The mock gateway
+deployer below is only one part of the complete China rebuild.
+
 ## Role
 
 The Aliyun Hangzhou server is PawGuide's in-region development, integration and

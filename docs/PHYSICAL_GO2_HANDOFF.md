@@ -1,5 +1,10 @@
 # Physical Go2 handoff
 
+> **Current deployment:** use
+> [CURRENT_RECOVERY_RUNBOOK.md](CURRENT_RECOVERY_RUNBOOK.md). The material
+> below records the earlier full-DimOS commissioning design and is not the
+> active lightweight physical profile.
+
 This is the operational handoff from the qualified simulation to the physical
 Unitree Go2 Air. The X5 is connected to the robot and the real adapter is
 running, but the gateway remains deliberately fail-closed until an operator
@@ -12,14 +17,15 @@ As verified on 2026-07-26:
 - X5 is online over Tailscale and uses Pixel USB tethering for its default
   route;
 - production gateway `:8765` is active with the physical `dimos_mcp` adapter;
-- physical DimOS is active and exposes all 17 required MCP tools;
+- physical MCP is active with the direct posture, STOP, and bounded-route
+  toolset;
 - simulation gateway `:8876` remains independent and operational;
 - the current physical allowlist is exactly `home,demo_gate`;
 - the DimOS Go2 import succeeds with the pinned PyYAML dependency;
 - physical enablement now runs the complete `--require-physical` readiness
   gate before starting DimOS or switching the gateway adapter;
-- the command center contains the bounded physical controls, per-tab
-  interlock, readiness checklists, and guarded exact-waypoint recording.
+- the command center is a tokenless kiosk with bounded physical controls and a
+  large STOP button;
 - the target Wi-Fi is `Go_62554`; the X5 has joined it and received
   `192.168.12.13/24`;
 - live routing and ping verified that this unit's LocalAP control address is
@@ -68,9 +74,9 @@ sudo /opt/pawguide/bin/enable-real-motion.sh \
   --i-understand-this-can-move-the-robot
 ```
 
-This command starts physical DimOS, verifies every required MCP tool, switches
-the production gateway to `dimos_mcp`, and leaves STOP latched. A failure rolls
-back to mock mode.
+This command starts the direct physical MCP bridge, verifies the current
+minimal physical toolset, switches the production gateway to `dimos_mcp`, and
+leaves STOP latched. A failure rolls back to mock mode.
 
 The X5 installer pins the official ARM CPU build of Torch. Do not replace it
 with the default PyPI ARM package, which resolves a large CUDA 13 stack that is
@@ -80,8 +86,8 @@ disabled by default in the headless physical service.
 LCM multicast, its loopback route, and receive buffers are prepared by the
 separate root-only `pawguide-lcm-network.service`. DimOS itself remains
 unprivileged and may use netlink only for read-only network checks. The
-physical runtime passed a two-minute stability gate with zero restarts and all
-17 required MCP tools continuously available before operator handoff.
+physical runtime and gateway were verified active with isolated loopback ports
+before operator handoff.
 
 Confirm:
 
@@ -95,11 +101,15 @@ Expected:
 {"status":"ok","adapter":"dimos_mcp","motion_capable":true}
 ```
 
-Then use `http://100.102.208.90:7780/command-center`, select the physical
-gateway, connect with the operator token, and follow
-`docs/FIRST_MOTION_TEST.md`.
+Then use `http://100.102.208.90:7780/command-center`. China nginx supplies the
+X5 operator credential; the browser does not ask for or receive it. Follow the
+current procedure in `docs/CURRENT_RECOVERY_RUNBOOK.md`.
 
-## Exact waypoint commissioning API
+## Historical exact-waypoint commissioning API
+
+The API below belongs to the full navigation profile and is not exposed by the
+current direct physical MCP bridge. The current `demo_gate` ID means the
+bounded one-metre commissioning route documented in the recovery runbook.
 
 The app does not need direct DimOS access. With an operator token, a fresh
 heartbeat, STOP still latched, and the robot visually confirmed stationary:
@@ -125,5 +135,5 @@ sudo /opt/pawguide/bin/disable-real-motion.sh
 ```
 
 This sends a best-effort redundant STOP, restores the mock adapter, restarts
-the gateway, and disables physical DimOS. STOP does not force a standing Go2
-to sit; keep physical support available throughout the posture test.
+the gateway, and disables physical DimOS. The direct physical STOP uses Damp;
+keep physical support available throughout the posture test.

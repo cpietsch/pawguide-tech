@@ -25,6 +25,7 @@ def test_x5_and_s100_entrypoints_are_packaged_and_executable() -> None:
         "run-dimos-local-ap.py",
         "direct-go2-mcp.py",
         "wait-for-dimos-mcp.sh",
+        "install-x5-simulation.sh",
     }
 
     provision_names = {path.name for path in (PROJECT / "provision").iterdir()}
@@ -53,6 +54,9 @@ def test_service_uses_profile_installed_runner() -> None:
     assert "ExecStartPre=/opt/pawguide/bin/wait-for-dimos-mcp.sh" in (
         gateway_service
     )
+    assert "--physical-minimal" in (
+        PROJECT / "provision/enable-real-motion.sh"
+    ).read_text()
 
 
 def test_bundle_builder_defaults_to_x5_and_accepts_both_profiles() -> None:
@@ -119,8 +123,18 @@ def test_physical_and_simulation_mcp_endpoints_are_isolated_on_x5() -> None:
     relay = (
         PROJECT / "provision/x5/pawguide-sim-mcp-relay.service"
     ).read_text()
+    sim_gateway = (
+        PROJECT / "provision/x5/pawguide-sim-gateway.service"
+    ).read_text()
+    sim_installer = (
+        PROJECT / "provision/install-x5-simulation.sh"
+    ).read_text()
 
     assert 'PAWGUIDE_DIMOS_MCP_PORT:-9990' in runner
     assert "http://127.0.0.1:9992/mcp" in sim_env
     assert "TCP-LISTEN:9992" in relay
     assert "TCP:100.102.208.90:9991" in relay
+    assert "EnvironmentFile=/etc/pawguide/pawguide-sim.env" in sim_gateway
+    assert "ExecStart=/opt/pawguide/.venv/bin/pawguide-gateway" in sim_gateway
+    assert "pawguide-sim-mcp-relay.service" in sim_installer
+    assert "pawguide-sim-gateway.service" in sim_installer

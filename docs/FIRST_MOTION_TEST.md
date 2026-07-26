@@ -1,5 +1,10 @@
 # First Go2 motion test — no LLM
 
+> **Current deployment:** use
+> [CURRENT_RECOVERY_RUNBOOK.md](CURRENT_RECOVERY_RUNBOOK.md). The token-entry,
+> typed-unlock, and explicit-arm browser steps below describe the older admin
+> console.
+
 This test proves the shortest useful path:
 
 ```text
@@ -110,14 +115,13 @@ After Terminal B reports the physical gateway as `dimos_mcp` and
 `motion_capable=true`, the same bounded sequence can be run from
 `http://100.102.208.90:7780/command-center`:
 
-1. Select **Physical gateway · X5 :8765** and enter the operator token.
-2. Connect and confirm the live state says `STOP LATCHED`.
-3. Type the displayed physical-control unlock phrase. This unlock lasts only
-   for the current browser tab.
-4. Start the 500 ms heartbeat, then explicitly arm/reset STOP.
-5. Send one posture action at a time and visually confirm completion.
-6. Press **STOP NOW**. Stop the heartbeat and confirm STOP is latched before
-   closing the tab.
+1. Open the tokenless kiosk and confirm it reports **X5 connected**.
+2. Confirm the live state says `STOP LATCHED`.
+3. Send one posture action at a time and visually confirm completion. The
+   kiosk starts the 500 ms heartbeat and resets STOP immediately before the
+   action.
+4. Press the large red **STOP** and confirm STOP is latched before closing the
+   tab.
 
 The browser console does not enable the real adapter itself. The SSH enable
 gate remains mandatory, and a checklist selection is evidence tracking—not

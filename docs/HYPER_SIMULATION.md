@@ -1,5 +1,10 @@
 # Hyper.ai Go2 simulation
 
+> Recovery order, current physical/simulation port isolation, and the
+> tokenless admin installation are authoritative in
+> [CURRENT_RECOVERY_RUNBOOK.md](CURRENT_RECOVERY_RUNBOOK.md). This document
+> remains the detailed simulation engineering record.
+
 ## Current topology
 
 As of 2026-07-25, the hardware-free Go2 test runtime is:
@@ -205,7 +210,8 @@ MCP backends must remain isolated: simulation uses `:9992`; physical uses
 
 The isolated simulation gateway sets `PAWGUIDE_DIMOS_MCP_TIMEOUT_S=15` because
 its loopback relay crosses China to Hyper and STOP deliberately invokes several
-DimOS cleanup tools. The physical gateway retains the five-second default.
+DimOS cleanup tools. The physical gateway also uses 15 seconds because its
+bounded commissioning route runs longer than five seconds.
 
 The migration acceptance sequence passed end to end:
 
@@ -222,25 +228,24 @@ is `artifacts/concept-pre-hardware-acceptance.json`.
 
 ## Operations
 
-The Tailscale command center now includes a native developer/operator console
-beside the live Rerun view. It proxies the existing X5 API without storing
-credentials on the China server:
+The Tailscale command center is now a tokenless physical-control kiosk. It
+proxies the existing X5 API while storing the required X5 operator credential
+only in a root-owned nginx include on the China server:
 
 - `/admin/api/sim/` forwards to the isolated simulation gateway on `:8876`;
 - `/admin/api/physical/` forwards to the physical/production gateway on
   `:8765`;
-- the operator enters the existing operator token, which remains in browser
-  memory and is forwarded in the standard `Authorization` header;
-- simulation is the default target; selecting the physical gateway requires a
-  typed per-tab interlock before heartbeat, arming, or motion controls become
-  available;
+- `/admin/api/physical/` receives its Authorization header from the generated
+  `/etc/pawguide/nginx-operator-auth.conf`;
+- the browser never receives or asks for the operator token;
+- Rerun remains at its separate simulation-only URL and is not embedded in the
+  physical kiosk;
 - STOP remains available once authenticated and connected, independent of the
   heartbeat state.
 
-The console exposes only the gateway's bounded action allowlist and exact
-waypoints. It also contains persistent browser-local physical-Go2 and venue
-commissioning checklists. Checking a box records evidence status only; it does
-not arm the gateway or authorize motion.
+The physical kiosk exposes Stand, Sit, Hello, Pause, the bounded one-metre
+round trip, and the large red STOP. Simulation remains available through the
+isolated `:8876` gateway and its dedicated engineering tools.
 
 On Hyper:
 

@@ -1,5 +1,9 @@
 # PawGuide MacBook Codex handoff
 
+> **Current deployment:** begin with
+> [CURRENT_RECOVERY_RUNBOOK.md](CURRENT_RECOVERY_RUNBOOK.md). This longer file
+> is retained for the original Mac/X5 provisioning history.
+
 ## Mission
 
 Provision the RDK X5 from the MacBook, validate the no-LLM PawGuide stack in
@@ -79,7 +83,7 @@ The authoritative simulator operations record is
 Private source repository:
 
 ```text
-https://github.com/cpietsch/pawguide
+https://github.com/cpietsch/pawguide-tech
 ```
 
 The canonical handoff lives on the default branch:
@@ -91,7 +95,7 @@ main
 If the repository is not already present on the Mac:
 
 ```bash
-gh repo clone cpietsch/pawguide ~/Code/pawguide
+gh repo clone cpietsch/pawguide-tech ~/Code/pawguide
 cd ~/Code/pawguide
 git switch main
 git pull --ff-only

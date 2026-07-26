@@ -1,5 +1,9 @@
 # PawGuide
 
+The authoritative deployment and disaster-recovery handoff is
+[docs/CURRENT_RECOVERY_RUNBOOK.md](docs/CURRENT_RECOVERY_RUNBOOK.md). Use it
+before the older commissioning notes when rebuilding China, X5, or Hyper.
+
 PawGuide is an autonomous event-guide prototype built from:
 
 - a Unitree Go2 Air for sensing and locomotion;

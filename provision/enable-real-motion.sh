@@ -66,6 +66,7 @@ for _attempt in $(seq 1 120); do
     http://127.0.0.1:9990/mcp |
     /opt/dimos/bin/python \
       /opt/pawguide/bin/check-dimos-tools.py \
+      --physical-minimal \
       --quiet; then
     dim_os_ready=1
     break

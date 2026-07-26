@@ -11,6 +11,7 @@ Group=pawguide
 WorkingDirectory=/var/lib/pawguide
 Environment=HOME=/var/lib/pawguide
 Environment=XDG_RUNTIME_DIR=/run/pawguide
+EnvironmentFile=-/etc/pawguide/pawguide.env
 RuntimeDirectory=pawguide
 RuntimeDirectoryMode=0700
 LoadCredential=unitree_aes:/etc/pawguide/unitree-aes.token

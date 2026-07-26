@@ -14,6 +14,7 @@ if [[ ! "${UNITREE_AES_128_KEY}" =~ ^[[:xdigit:]]{32}$ ]]; then
   echo "The Unitree credential has an invalid format." >&2
   exit 1
 fi
+robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"
 
 if ! pulseaudio --check >/dev/null 2>&1; then
   pulseaudio --start --exit-idle-time=-1
@@ -22,7 +23,7 @@ fi
 exec /opt/dimos/bin/dimos \
   --transport lcm \
   --viewer none \
-  --robot-ip 192.168.12.1 \
+  --robot-ip "${robot_ip}" \
   --unitree-webrtc-connection-method local_ap \
   run \
   unitree-go2 \

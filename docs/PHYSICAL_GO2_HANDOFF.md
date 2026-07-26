@@ -19,36 +19,38 @@ As verified on 2026-07-26:
   gate before starting DimOS or switching the gateway adapter;
 - the command center contains the bounded physical controls, per-tab
   interlock, readiness checklists, and guarded exact-waypoint recording.
+- the target unit is tracked as `Go2 62554`, with supplied robot address
+  `10.88.15.7`; that address is configuration, not assumed from the usual
+  `192.168.12.1` LocalAP default;
+- its root-owned NetworkManager profile and root-owned Unitree credential are
+  installed on the X5 without storing either secret in this repository.
 
 No physical waypoint pose has been fabricated from simulation. `home` and
 `demo_gate` must be recorded from the real robot at the venue.
 
-## Inputs still required from the robot owner
+## Remaining physical input
 
-The following cannot be provisioned before the Go2 is powered and available:
-
-1. Go2 LocalAP SSID and WPA password.
-2. The robot's 32-hex-character Unitree AES key.
-3. Physical confirmation of support stand, clear leg envelope, charged
-   battery, X5 power/cooling, operator, spotter, and immediate STOP access.
+The supplied network and AES information is installed. The robot still needs
+to be powered and within Wi-Fi range. The X5 has not yet observed the supplied
+BSSID or reached `10.88.15.7`, so real motion remains disabled. Physical
+confirmation of the support stand, clear leg envelope, charged battery, X5
+power/cooling, operator, spotter, and immediate STOP access is also required.
 
 Do not paste passwords or the AES key into chat or shell arguments. Enter them
 only into the hidden/local prompts below.
 
 ## Connect the robot
 
-On the X5:
+When the robot is powered, the saved profile should autoconnect. On the X5:
 
 ```bash
 ssh sunrise@100.72.30.53
-sudo /opt/pawguide/bin/configure-go2-ap.sh
-sudo /opt/pawguide/bin/install-robot-credential.sh
 sudo /opt/pawguide/bin/check-x5-readiness.sh --require-physical
 ```
 
 The readiness command must finish with zero failures. Specifically verify that
-`192.168.12.1` routes over `wlan0`, while the default route remains on Pixel
-USB/Ethernet.
+the configured robot address routes over `wlan0`, while the default route
+remains on Pixel USB/Ethernet.
 
 ## Supported-off-ground enable
 

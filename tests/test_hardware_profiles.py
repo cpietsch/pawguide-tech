@@ -74,3 +74,16 @@ def test_x5_real_motion_requires_installed_physical_readiness_gate() -> None:
     assert "/opt/pawguide/bin/check-x5-readiness.sh --require-physical" in enable
     assert '"${require_physical}" -eq 1' in readiness
     assert '"pyyaml>=6.0.2"' in patch
+
+
+def test_x5_robot_address_is_deployment_config_not_a_hardcoded_runtime() -> None:
+    runner = (PROJECT / "provision/run-dimos-x5.sh").read_text()
+    service = (PROJECT / "provision/pawguide-dimos.service").read_text()
+    enable = (PROJECT / "provision/enable-real-motion.sh").read_text()
+    configure = (PROJECT / "provision/configure-go2-ap.sh").read_text()
+
+    assert 'robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"' in runner
+    assert '--robot-ip "${robot_ip}"' in runner
+    assert "EnvironmentFile=-/etc/pawguide/pawguide.env" in service
+    assert 'ping -c 1 -W 2 "${robot_ip}"' in enable
+    assert "PAWGUIDE_ROBOT_BSSID" in configure

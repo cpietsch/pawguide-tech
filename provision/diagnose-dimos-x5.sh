@@ -2,6 +2,10 @@
 set -euo pipefail
 
 # Read-only DimOS diagnostics for the RDK X5 edge runtime.
+if [[ -r /etc/pawguide/pawguide.env ]]; then
+  # shellcheck disable=SC1091
+  source /etc/pawguide/pawguide.env
+fi
 dimos_bin="${PAWGUIDE_DIMOS_BIN:-/opt/dimos/bin/dimos}"
 robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"
 mcp_url="${PAWGUIDE_DIMOS_MCP_URL:-http://127.0.0.1:9990/mcp}"

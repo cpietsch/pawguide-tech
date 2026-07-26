@@ -33,12 +33,16 @@ case "${hardware_profile}" in
     exit 1
     ;;
 esac
+environment_path=/etc/pawguide/pawguide.env
+# shellcheck disable=SC1090
+source "${environment_path}"
+robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"
 if [[ ! -f /etc/pawguide/unitree-aes.token ]]; then
   echo "Install the robot credential first." >&2
   exit 1
 fi
-if ! ping -c 1 -W 2 192.168.12.1 >/dev/null 2>&1; then
-  echo "The Go2 AP is not reachable at 192.168.12.1." >&2
+if ! ping -c 1 -W 2 "${robot_ip}" >/dev/null 2>&1; then
+  echo "The Go2 is not reachable at ${robot_ip}." >&2
   exit 1
 fi
 if [[ ! -x /opt/pawguide/bin/check-x5-readiness.sh ]]; then
@@ -74,7 +78,6 @@ if [[ "${dim_os_ready}" -ne 1 ]] || ! systemctl is-active --quiet pawguide-dimos
   exit 1
 fi
 
-environment_path=/etc/pawguide/pawguide.env
 environment_backup="$(mktemp /etc/pawguide/.pawguide.env.XXXXXX)"
 cp --preserve=mode,ownership "${environment_path}" "${environment_backup}"
 rollback() {

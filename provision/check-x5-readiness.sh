@@ -10,6 +10,11 @@ elif [[ -n "${1:-}" ]]; then
   echo "Usage: $0 [--require-physical]" >&2
   exit 2
 fi
+if [[ -r /etc/pawguide/pawguide.env ]]; then
+  # Root-owned deployment settings; includes file paths but no secret values.
+  # shellcheck disable=SC1091
+  source /etc/pawguide/pawguide.env
+fi
 wifi_interface="${PAWGUIDE_WIFI_INTERFACE:-wlan0}"
 robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"
 

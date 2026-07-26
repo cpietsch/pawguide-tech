@@ -8,6 +8,8 @@ fi
 
 wifi_interface="${PAWGUIDE_WIFI_INTERFACE:-wlan0}"
 connection_name="${PAWGUIDE_WIFI_CONNECTION:-go2-ap-client}"
+robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"
+robot_bssid="${PAWGUIDE_ROBOT_BSSID:-}"
 
 if ! command -v nmcli >/dev/null 2>&1; then
   echo "NetworkManager/nmcli is not installed." >&2
@@ -41,11 +43,20 @@ nmcli connection modify "${connection_name}" \
   ipv6.method disabled \
   802-11-wireless.powersave 2 \
   wifi-sec.key-mgmt wpa-psk
+if [[ -n "${robot_bssid}" ]]; then
+  if [[ ! "${robot_bssid}" =~ ^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$ ]]; then
+    echo "PAWGUIDE_ROBOT_BSSID must be a six-byte MAC address." >&2
+    exit 1
+  fi
+  nmcli connection modify "${connection_name}" \
+    802-11-wireless.bssid "${robot_bssid}" \
+    802-11-wireless.hidden yes
+fi
 
 echo "Network profile prepared. NetworkManager will now ask for the AP password."
 nmcli --ask connection up "${connection_name}"
 
 echo "Robot route:"
-ip -4 route get 192.168.12.1
+ip -4 route get "${robot_ip}"
 echo "Default route:"
 ip -4 route show default

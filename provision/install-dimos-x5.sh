@@ -107,6 +107,18 @@ install \
   -o root \
   -g root \
   -m 0755 \
+  "${script_dir}/run-dimos-local-ap.py" \
+  /opt/pawguide/bin/run-dimos-local-ap.py
+install \
+  -o root \
+  -g root \
+  -m 0755 \
+  "${script_dir}/direct-go2-mcp.py" \
+  /opt/pawguide/bin/direct-go2-mcp.py
+install \
+  -o root \
+  -g root \
+  -m 0755 \
   "${script_dir}/tag-waypoint.py" \
   /opt/pawguide/bin/tag-waypoint.py
 install \

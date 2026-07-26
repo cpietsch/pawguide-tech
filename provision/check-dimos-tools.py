@@ -18,11 +18,16 @@ REQUIRED_TOOLS = {
     "stop_patrol",
     "tag_location",
 }
+PHYSICAL_MINIMUM_TOOLS = {
+    "emergency_stop",
+    "execute_sport_command",
+}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--physical-minimal", action="store_true")
     args = parser.parse_args()
 
     try:
@@ -41,14 +46,15 @@ def main() -> int:
             print("Invalid DimOS MCP tool listing.", file=sys.stderr)
         return 1
 
-    missing = sorted(REQUIRED_TOOLS - names)
+    required = PHYSICAL_MINIMUM_TOOLS if args.physical_minimal else REQUIRED_TOOLS
+    missing = sorted(required - names)
     if missing:
         if not args.quiet:
             print(f"Missing DimOS tools: {', '.join(missing)}", file=sys.stderr)
         return 1
 
     if not args.quiet:
-        for name in sorted(REQUIRED_TOOLS):
+        for name in sorted(required):
             print(f"PASS  {name}")
     return 0
 

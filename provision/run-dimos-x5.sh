@@ -15,21 +15,28 @@ if [[ ! "${UNITREE_AES_128_KEY}" =~ ^[[:xdigit:]]{32}$ ]]; then
   exit 1
 fi
 robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"
+physical_mcp_port="${PAWGUIDE_DIMOS_MCP_PORT:-9990}"
 
 if [[ "${PAWGUIDE_ENABLE_PULSEAUDIO:-NO}" == "YES" ]] &&
   ! pulseaudio --check >/dev/null 2>&1; then
   pulseaudio --start --exit-idle-time=-1
 fi
 
-exec /opt/dimos/bin/dimos \
+if [[ "${PAWGUIDE_DIMOS_PROFILE:-sport}" == "sport" ]]; then
+  exec /opt/dimos/bin/python /opt/pawguide/bin/direct-go2-mcp.py
+fi
+
+exec /opt/dimos/bin/python /opt/pawguide/bin/run-dimos-local-ap.py \
   --transport lcm \
   --viewer none \
   --robot-ip "${robot_ip}" \
   --unitree-webrtc-connection-method local_ap \
+  --listen-host 127.0.0.1 \
+  --mcp-port "${physical_mcp_port}" \
   run \
-  unitree-go2 \
+  unitree-go2-basic \
+  replanning-a-star-planner \
   unitree-skill-container \
-  paw-guide-waypoint-skill \
   mcp-server \
   --disable perceive-loop-skill \
   --disable websocket-vis-module

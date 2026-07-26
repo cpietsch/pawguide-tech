@@ -1,7 +1,7 @@
 [Unit]
 Description=PawGuide edge safety gateway
-After=network-online.target tailscaled.service
-Wants=network-online.target
+After=network-online.target tailscaled.service pawguide-dimos.service
+Wants=network-online.target pawguide-dimos.service
 
 [Service]
 Type=simple
@@ -9,9 +9,11 @@ User=pawguide
 Group=pawguide
 WorkingDirectory=/opt/pawguide
 EnvironmentFile=/etc/pawguide/pawguide.env
+ExecStartPre=/opt/pawguide/bin/wait-for-dimos-mcp.sh
 ExecStart=/opt/pawguide/.venv/bin/pawguide-gateway
 Restart=always
 RestartSec=1
+TimeoutStartSec=210
 NoNewPrivileges=true
 CapabilityBoundingSet=
 LockPersonality=true

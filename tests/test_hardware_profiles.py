@@ -22,6 +22,9 @@ def test_x5_and_s100_entrypoints_are_packaged_and_executable() -> None:
         "install-s100-bridge.sh",
         "rdk-s100-platform.sh",
         "run-dimos-s100.sh",
+        "run-dimos-local-ap.py",
+        "direct-go2-mcp.py",
+        "wait-for-dimos-mcp.sh",
     }
 
     provision_names = {path.name for path in (PROJECT / "provision").iterdir()}
@@ -40,6 +43,16 @@ def test_service_uses_profile_installed_runner() -> None:
     assert "/opt/pawguide/bin/run-dimos.sh" in s100_installer
     assert "x5" in x5_installer
     assert "s100" in s100_installer
+
+    gateway_service = (
+        PROJECT / "provision/pawguide-gateway.service"
+    ).read_text()
+    assert "After=network-online.target tailscaled.service pawguide-dimos.service" in (
+        gateway_service
+    )
+    assert "ExecStartPre=/opt/pawguide/bin/wait-for-dimos-mcp.sh" in (
+        gateway_service
+    )
 
 
 def test_bundle_builder_defaults_to_x5_and_accepts_both_profiles() -> None:
@@ -86,6 +99,9 @@ def test_x5_robot_address_is_deployment_config_not_a_hardcoded_runtime() -> None
 
     assert 'robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"' in runner
     assert '--robot-ip "${robot_ip}"' in runner
+    assert 'physical_mcp_port="${PAWGUIDE_DIMOS_MCP_PORT:-9990}"' in runner
+    assert '--mcp-port "${physical_mcp_port}"' in runner
+    assert "/opt/pawguide/bin/run-dimos-local-ap.py" in runner
     assert 'PAWGUIDE_ENABLE_PULSEAUDIO:-NO' in runner
     assert "EnvironmentFile=-/etc/pawguide/pawguide.env" in service
     assert "pawguide-lcm-network.service" in service
@@ -95,3 +111,16 @@ def test_x5_robot_address_is_deployment_config_not_a_hardcoded_runtime() -> None
     assert "https://download.pytorch.org/whl/cpu" in (
         PROJECT / "provision/install-dimos-x5.sh"
     ).read_text()
+
+
+def test_physical_and_simulation_mcp_endpoints_are_isolated_on_x5() -> None:
+    runner = (PROJECT / "provision/run-dimos-x5.sh").read_text()
+    sim_env = (PROJECT / "provision/x5/pawguide-sim-concept.env").read_text()
+    relay = (
+        PROJECT / "provision/x5/pawguide-sim-mcp-relay.service"
+    ).read_text()
+
+    assert 'PAWGUIDE_DIMOS_MCP_PORT:-9990' in runner
+    assert "http://127.0.0.1:9992/mcp" in sim_env
+    assert "TCP-LISTEN:9992" in relay
+    assert "TCP:100.102.208.90:9991" in relay

@@ -54,7 +54,7 @@ def test_dashboard_is_a_tokenless_physical_kiosk_controller() -> None:
     assert 'data-action="stand_up"' in html
     assert 'data-action="sit_down"' in html
     assert 'data-action="greeting"' in html
-    assert 'data-action="return_home"' in html
+    assert 'data-action="return_home"' not in html
     assert 'id="operator-token"' not in html
     assert 'id="gateway-target"' not in html
     assert 'id="connect-command"' not in html

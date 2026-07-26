@@ -190,16 +190,18 @@ pawguide-sim-mcp-relay.service
 pawguide-sim-gateway.service
 ```
 
-The X5 relay still targets `100.102.208.90:9991`; no X5 endpoint change was
-needed during migration. Check both gateways:
+The X5 relay listens only on `127.0.0.1:9992` and targets
+`100.102.208.90:9991`. Port `127.0.0.1:9990` is reserved exclusively for the
+physical DimOS MCP server. Check both gateways:
 
 ```bash
 curl -fsS http://100.72.30.53:8876/health
 curl -fsS http://100.72.30.53:8765/health
 ```
 
-Expected adapters are `dimos_mcp` with motion capability on 8876 and `mock`
-without motion capability on 8765.
+Expected adapters are `dimos_mcp` with motion capability on both ports. Their
+MCP backends must remain isolated: simulation uses `:9992`; physical uses
+`:9990`.
 
 The isolated simulation gateway sets `PAWGUIDE_DIMOS_MCP_TIMEOUT_S=15` because
 its loopback relay crosses China to Hyper and STOP deliberately invokes several

@@ -85,6 +85,12 @@ install \
   -m 0644 \
   "${script_dir}/pawguide-gateway.service" \
   /etc/systemd/system/pawguide-gateway.service
+install \
+  -o root \
+  -g root \
+  -m 0755 \
+  "${script_dir}/wait-for-dimos-mcp.sh" \
+  /opt/pawguide/bin/wait-for-dimos-mcp.sh
 
 systemctl daemon-reload
 systemctl enable --now pawguide-gateway.service

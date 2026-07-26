@@ -12,6 +12,66 @@ on the X5 maintains the safety heartbeat and exposes only exact commands:
 `stand`, `sit`, `hello`, `goto`, `pause`, `patrol`, `home` and `stop`.
 Arbitrary velocity and arbitrary Unitree sport commands are not exposed.
 
+## Project questions
+
+### In a nutshell: What have you done, and for whom?
+
+We built PawGuide, an accessible robotic airport-guide prototype for travelers
+who may find an unfamiliar terminal difficult to navigate, especially older,
+blind and low-vision passengers. It combines a Unitree Go2, an RDK X5 and
+DimOS with our fail-closed control layer, exact waypoint missions, operator
+tools and a simulation-qualified five-metre gate demonstration.
+
+### Why did you choose to work on this topic?
+
+Airport wayfinding can be stressful and particularly exclusionary when signs,
+crowds or long walking routes are hard to manage, so a guide that meets a
+traveler where they are could make assistance easier to find. A friendly
+mobile robot also gives us a concrete way to explore useful autonomy while
+keeping the first deployment bounded, supervised and fail-closed.
+
+### What exactly is the robot doing?
+
+In the bounded airport demonstration, PawGuide starts seated at `home`, stands
+and greets the traveler, navigates about five metres to `demo_gate`, presents
+the gate, returns home, sits and re-enters its STOP-latched idle state. It
+follows an obstacle-aware route between two pre-recorded exact waypoints; it
+does not roam freely, follow a person or improvise destinations in a crowd.
+
+### Which DimOS capabilities have you used, and what did you develop independently?
+
+We use DimOS for the Go2 integration, local LCM streams, lidar mapping,
+obstacle-aware planning and navigation, and the loopback MCP tool bus; the
+current physical milestone does not use visual-semantic memory, voice or an
+LLM. We added the exact-match persistent waypoint skill and Go2
+LocalAP/direct-stop support, then independently built the authenticated safety
+gateway, mission supervisor and watchdog, heartbeat/arming rules, operator and
+show tooling, edge bundles, and simulation/acceptance suite.
+
+### What is remote, and what is autonomous?
+
+A nearby human operator controls the session from the X5 console today and
+from the Pixel app in the planned interaction stage: the operator supplies the
+heartbeat, explicitly arms, selects an allowed mission, confirms arrivals and
+can always request STOP. An authenticated developer path over Tailscale can
+request restricted high-level actions or STOP, but it cannot create the
+heartbeat or release STOP. Between approved waypoints, the X5 and DimOS
+autonomously plan and follow the local route and avoid obstacles, while the
+watchdog autonomously stops the robot if the operator heartbeat expires; no
+remote user steers raw velocity.
+
+### Could this be commercially viable, and who would pay for it?
+
+PawGuide has potential as a managed accessibility and wayfinding service for
+airports, large transit hubs, hospitals and event venues, although that
+business still needs real-site validation. Airport or venue operators,
+airlines and passenger-assistance contractors could pay for leased robots,
+site integration and fleet support when those costs compare favorably with
+missed journeys and purely staff-delivered routine guidance. The target users
+are passengers and visitors who want easier wayfinding, especially older,
+blind or low-vision people and anyone facing language, cognitive or
+unfamiliarity barriers.
+
 ## Runtime topology
 
 ```text

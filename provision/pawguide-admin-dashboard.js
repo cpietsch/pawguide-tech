@@ -712,6 +712,7 @@
   };
   const byId = (id) => document.querySelector(`#${id}`);
   const actionButtons = [...document.querySelectorAll("[data-action]")];
+  const roundTripButton = byId("round-trip-command");
 
   function log(message, detail) {
     const stamp = new Date().toLocaleTimeString();
@@ -763,6 +764,7 @@
     actionButtons.forEach((button) => {
       button.disabled = !state.connected || !state.heartbeat || state.busy;
     });
+    roundTripButton.disabled = !state.connected || !state.heartbeat || state.busy;
     const guidance = byId("control-guidance");
     const ready = state.connected && state.heartbeat && !state.busy;
     guidance.className = ready ? "ready" : "";
@@ -901,6 +903,24 @@
   byId("stop-command").addEventListener("click", () => sendAction("stop"));
   actionButtons.forEach((button) => {
     button.addEventListener("click", () => sendAction(button.dataset.action));
+  });
+  roundTripButton.addEventListener("click", async () => {
+    if (state.busy) return;
+    state.busy = true;
+    renderControls();
+    try {
+      await ensureMovementReady();
+      await postCommand("go_to_waypoint", { waypoint_id: "demo_gate" });
+      await new Promise((resolve) => root.setTimeout(resolve, 1000));
+      await postCommand("return_home");
+      renderState(await request("/v1/state"));
+      log("1 m round trip complete");
+    } catch (error) {
+      log("Round trip failed", error.message);
+    } finally {
+      state.busy = false;
+      renderControls();
+    }
   });
   root.addEventListener("pagehide", () => {
     if (state.heartbeatTimer !== null) root.clearInterval(state.heartbeatTimer);

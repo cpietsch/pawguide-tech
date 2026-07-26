@@ -54,6 +54,7 @@ def test_dashboard_is_a_tokenless_physical_kiosk_controller() -> None:
     assert 'data-action="stand_up"' in html
     assert 'data-action="sit_down"' in html
     assert 'data-action="greeting"' in html
+    assert 'id="round-trip-command"' in html
     assert 'data-action="return_home"' not in html
     assert 'id="operator-token"' not in html
     assert 'id="gateway-target"' not in html
@@ -61,7 +62,7 @@ def test_dashboard_is_a_tokenless_physical_kiosk_controller() -> None:
     assert 'id="heartbeat-command"' not in html
     assert 'id="arm-command"' not in html
     assert "ENABLE PHYSICAL CONTROL" not in html
-    assert 'src="/admin/dashboard.js?v=kiosk-control-1"' in html
+    assert 'src="/admin/dashboard.js?v=kiosk-control-2"' in html
 
     nginx = NGINX.read_text(encoding="utf-8")
     assert "location = /admin/dashboard.js" in nginx

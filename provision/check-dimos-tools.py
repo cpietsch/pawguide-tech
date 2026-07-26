@@ -21,6 +21,7 @@ REQUIRED_TOOLS = {
 PHYSICAL_MINIMUM_TOOLS = {
     "emergency_stop",
     "execute_sport_command",
+    "navigate_to_waypoint",
 }
 
 

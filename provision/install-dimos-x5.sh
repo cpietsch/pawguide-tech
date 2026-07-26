@@ -77,6 +77,13 @@ fi
 if [[ ! -x "${venv_dir}/bin/python" ]]; then
   uv venv --python 3.12 "${venv_dir}"
 fi
+# The default PyPI ARM resolver selects a multi-gigabyte CUDA 13 dependency
+# stack. The X5 control path needs Torch only because DimOS imports its mapping
+# abstractions, so install the official CPU wheel explicitly.
+uv pip install \
+  --python "${venv_dir}/bin/python" \
+  --index-url https://download.pytorch.org/whl/cpu \
+  "torch==2.13.0+cpu"
 uv pip install \
   --python "${venv_dir}/bin/python" \
   --prerelease allow \
@@ -118,6 +125,7 @@ for commissioning_script in \
   check-x5-readiness.sh \
   configure-go2-ap.sh \
   install-robot-credential.sh \
+  rdk-x5-platform.sh \
   enable-real-motion.sh \
   disable-real-motion.sh; do
   install \
@@ -133,6 +141,18 @@ install \
   -m 0644 \
   "${script_dir}/pawguide-dimos.service" \
   /etc/systemd/system/pawguide-dimos.service
+install \
+  -o root \
+  -g root \
+  -m 0755 \
+  "${script_dir}/configure-lcm-network.sh" \
+  /opt/pawguide/bin/configure-lcm-network.sh
+install \
+  -o root \
+  -g root \
+  -m 0644 \
+  "${script_dir}/pawguide-lcm-network.service" \
+  /etc/systemd/system/pawguide-lcm-network.service
 
 printf 'x5\n' > /etc/pawguide/hardware-profile
 chown root:pawguide /etc/pawguide/hardware-profile

@@ -8,6 +8,7 @@ PROJECT = Path(__file__).parents[1]
 def test_x5_and_s100_entrypoints_are_packaged_and_executable() -> None:
     expected = {
         "bootstrap-rdk-x5.sh",
+        "configure-lcm-network.sh",
         "check-x5-readiness.sh",
         "diagnose-dimos-x5.sh",
         "install-dimos-x5.sh",
@@ -67,6 +68,7 @@ def test_x5_real_motion_requires_installed_physical_readiness_gate() -> None:
         "check-x5-readiness.sh",
         "configure-go2-ap.sh",
         "install-robot-credential.sh",
+        "rdk-x5-platform.sh",
         "enable-real-motion.sh",
         "disable-real-motion.sh",
     ):
@@ -84,6 +86,12 @@ def test_x5_robot_address_is_deployment_config_not_a_hardcoded_runtime() -> None
 
     assert 'robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"' in runner
     assert '--robot-ip "${robot_ip}"' in runner
+    assert 'PAWGUIDE_ENABLE_PULSEAUDIO:-NO' in runner
     assert "EnvironmentFile=-/etc/pawguide/pawguide.env" in service
+    assert "pawguide-lcm-network.service" in service
+    assert "AF_NETLINK" in service
     assert 'ping -c 1 -W 2 "${robot_ip}"' in enable
     assert "PAWGUIDE_ROBOT_BSSID" in configure
+    assert "https://download.pytorch.org/whl/cpu" in (
+        PROJECT / "provision/install-dimos-x5.sh"
+    ).read_text()

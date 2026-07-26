@@ -1,8 +1,9 @@
 # Physical Go2 handoff
 
 This is the operational handoff from the qualified simulation to the physical
-Unitree Go2 Air. The X5 is prepared but remains deliberately fail-closed until
-the robot is present.
+Unitree Go2 Air. The X5 is connected to the robot and the real adapter is
+running, but the gateway remains deliberately fail-closed until an operator
+starts the heartbeat and explicitly arms it.
 
 ## Prepared state
 
@@ -10,8 +11,8 @@ As verified on 2026-07-26:
 
 - X5 is online over Tailscale and uses Pixel USB tethering for its default
   route;
-- production gateway `:8765` is active in `mock` mode with motion disabled;
-- physical DimOS is installed but inactive and disabled;
+- production gateway `:8765` is active with the physical `dimos_mcp` adapter;
+- physical DimOS is active and exposes all 17 required MCP tools;
 - simulation gateway `:8876` remains independent and operational;
 - the current physical allowlist is exactly `home,demo_gate`;
 - the DimOS Go2 import succeeds with the pinned PyYAML dependency;
@@ -35,9 +36,11 @@ No physical waypoint pose has been fabricated from simulation. `home` and
 The supplied network and AES information is installed, association and routing
 are verified, and the software readiness gate passes. The supplied MAC did not
 match the Wi-Fi BSSID, so the saved profile uses the exact SSID rather than an
-incorrect BSSID lock. Real motion remains disabled until physical confirmation
-of the support stand, clear leg envelope, charged battery, X5 power/cooling,
-operator, spotter, and immediate STOP access.
+incorrect BSSID lock. After physical confirmation of the support stand, clear
+leg envelope, charged battery, X5 power/cooling, operator, spotter, and
+immediate STOP access, the real adapter was enabled. The gateway remains
+STOP-latched with no heartbeat and no active waypoint; enabling the adapter
+did not arm the robot.
 
 Do not paste passwords or the AES key into chat or shell arguments. Enter them
 only into the hidden/local prompts below.
@@ -68,6 +71,17 @@ sudo /opt/pawguide/bin/enable-real-motion.sh \
 This command starts physical DimOS, verifies every required MCP tool, switches
 the production gateway to `dimos_mcp`, and leaves STOP latched. A failure rolls
 back to mock mode.
+
+The X5 installer pins the official ARM CPU build of Torch. Do not replace it
+with the default PyPI ARM package, which resolves a large CUDA 13 stack that is
+not used by this control path. Pixel owns showcase audio, so PulseAudio is
+disabled by default in the headless physical service.
+
+LCM multicast, its loopback route, and receive buffers are prepared by the
+separate root-only `pawguide-lcm-network.service`. DimOS itself remains
+unprivileged and may use netlink only for read-only network checks. The
+physical runtime passed a two-minute stability gate with zero restarts and all
+17 required MCP tools continuously available before operator handoff.
 
 Confirm:
 

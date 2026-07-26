@@ -16,7 +16,8 @@ if [[ ! "${UNITREE_AES_128_KEY}" =~ ^[[:xdigit:]]{32}$ ]]; then
 fi
 robot_ip="${PAWGUIDE_ROBOT_IP:-192.168.12.1}"
 
-if ! pulseaudio --check >/dev/null 2>&1; then
+if [[ "${PAWGUIDE_ENABLE_PULSEAUDIO:-NO}" == "YES" ]] &&
+  ! pulseaudio --check >/dev/null 2>&1; then
   pulseaudio --start --exit-idle-time=-1
 fi
 

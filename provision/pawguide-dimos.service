@@ -1,7 +1,7 @@
 [Unit]
 Description=PawGuide local DimOS navigation stack
-After=network-online.target NetworkManager.service
-Wants=network-online.target
+After=network-online.target NetworkManager.service pawguide-lcm-network.service
+Wants=network-online.target pawguide-lcm-network.service
 ConditionPathExists=/etc/pawguide/unitree-aes.token
 
 [Service]
@@ -31,7 +31,7 @@ ProtectKernelModules=true
 ProtectKernelLogs=true
 ProtectControlGroups=true
 ProtectClock=true
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 RestrictNamespaces=true
 RestrictRealtime=true
 SystemCallArchitectures=native

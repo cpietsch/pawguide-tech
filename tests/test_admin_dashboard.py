@@ -68,7 +68,7 @@ def test_dashboard_exposes_physical_control_center_without_rerun_viewer() -> Non
     assert 'data-checklist="robot"' in html
     assert 'data-checklist="venue"' in html
     assert "ENABLE PHYSICAL CONTROL" not in html
-    assert 'src="/admin/dashboard.js?v=physical-control-2"' in html
+    assert 'src="/admin/dashboard.js?v=physical-control-3"' in html
 
     nginx = NGINX.read_text(encoding="utf-8")
     assert "location = /admin/dashboard.js" in nginx
@@ -95,6 +95,18 @@ def test_control_center_generates_only_allowlisted_command_envelopes() -> None:
         "action": "go_to_waypoint",
         "arguments": {"waypoint_id": "demo_gate"},
     }
+
+
+def test_command_id_fallback_works_without_secure_context_crypto() -> None:
+    command_id = _run_control(
+        "(() => { Object.defineProperty(globalThis, 'crypto', "
+        "{value: undefined, configurable: true}); return ui.newCommandId(); })()"
+    )
+
+    assert isinstance(command_id, str)
+    assert len(command_id) == 36
+    assert command_id[14] == "4"
+    assert command_id[19] in "89ab"
 
 
 def test_command_controls_require_only_connection_and_heartbeat() -> None:

@@ -20,27 +20,38 @@ simulation MCP relay: 127.0.0.1:9992
 PAWGUIDE_DIMOS_MCP_TIMEOUT_S: 15
 ```
 
-The deployed copies of these files matched the repository byte-for-byte:
+The deployed copies of these files matched the final repository byte-for-byte:
 
 ```text
 provision/direct-go2-mcp.py
 provision/check-dimos-tools.py
-provision/run-dimos-x5.sh
-provision/run-dimos-local-ap.py
 provision/wait-for-dimos-mcp.sh
-provision/pawguide-dimos.service
 provision/pawguide-gateway.service
 provision/x5/pawguide-sim-mcp-relay.service
 ```
+
+The deployed X5 runner and physical service matched the pre-cleanup snapshot
+in commit `13791d2`. The final cleanup removed the runner's unused
+full-navigation branch and LCM setup. The supported replacement keeps the
+observed direct bridge and removes the obsolete service dependency; install it
+on the next X5 rebuild.
+The physical gateway's served OpenAPI document was semantically identical to
+the tracked contract at audit time.
 
 ## China server
 
 ```text
 OS: Ubuntu 24.04, x86_64
+Kernel: 6.8.0-63-generic
 Tailscale IPv4: 100.102.208.90
 admin nginx: 100.102.208.90:7780
 Hyper MCP relay: 100.102.208.90:9991
 Rerun mux: 100.102.208.90:9879
+pawguide: 0.1.0
+fastapi: 0.139.2
+uvicorn: 0.51.0
+pydantic: 2.13.4
+httpx: 0.28.1
 ```
 
 The deployed dashboard HTML and JavaScript matched

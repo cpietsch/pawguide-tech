@@ -76,7 +76,7 @@ fi
 
 # The image's cloud-only mirror resolves to another unreachable 100.100.2.x
 # service address. Preserve the original once, then use Aliyun's public HTTPS
-# mirror, which is reachable from this instance without an exit node.
+# mirror, which is reachable from this instance.
 apt_sources="/etc/apt/sources.list"
 if grep -q 'mirrors\.cloud\.aliyuncs\.com/ubuntu' "${apt_sources}"; then
   if [[ ! -e "${apt_sources}.before-pawguide" ]]; then

@@ -8,3 +8,7 @@ __pycache__/
 recordings/
 models/
 dist/
+artifacts/soak/*-retry-*/
+artifacts/soak/qualification-*/
+artifacts/soak/commissioning-*/
+artifacts/pre-hardware-*.json

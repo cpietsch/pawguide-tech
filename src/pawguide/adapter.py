@@ -1,8 +1,4 @@
-"""Robot adapter boundary.
-
-The real DimOS adapter will be added only after the safety gateway has been
-tested against the physical Go2. Until then, the gateway cannot move hardware.
-"""
+"""Robot adapter boundary for mock and MCP-backed deployments."""
 
 from __future__ import annotations
 
@@ -30,8 +26,6 @@ class RobotAdapter(Protocol):
     def start_patrol(self) -> None: ...
 
     def return_home(self) -> None: ...
-
-    def tag_waypoint(self, waypoint_id: str) -> str: ...
 
 
 @dataclass
@@ -63,10 +57,6 @@ class MockRobotAdapter:
 
     def return_home(self) -> None:
         self.calls.append(("return_home", None))
-
-    def tag_waypoint(self, waypoint_id: str) -> str:
-        self.calls.append(("tag_waypoint", waypoint_id))
-        return f"Tagged exact waypoint '{waypoint_id}'."
 
 
 class DimOSMcpError(RuntimeError):
@@ -132,9 +122,6 @@ class DimOSMcpAdapter:
 
     def return_home(self) -> None:
         self.go_to_waypoint("home")
-
-    def tag_waypoint(self, waypoint_id: str) -> str:
-        return self._call_tool("tag_location", {"waypoint_id": waypoint_id})
 
     def _call_tool(self, name: str, arguments: dict[str, object]) -> str:
         response = self._client.post(

@@ -64,6 +64,3 @@ connector heating or fan obstruction fails the mounting gate.
 5. Walk at minimum speed, STOP, and inspect saddle shift after every run.
 6. Disconnect and reconnect USB; heartbeat loss must latch STOP.
 7. Confirm the complete payload can be removed without tools.
-
-The future S100 harness has separate requirements in
-`docs/S100_MOUNTING_REQUIREMENTS.md`.

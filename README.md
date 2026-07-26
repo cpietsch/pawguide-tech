@@ -1,167 +1,88 @@
 # PawGuide
 
-The authoritative deployment and disaster-recovery handoff is
-[docs/CURRENT_RECOVERY_RUNBOOK.md](docs/CURRENT_RECOVERY_RUNBOOK.md). Use it
-before the older commissioning notes when rebuilding China, X5, or Hyper.
+PawGuide is the control, simulation, and deployment repository for a Unitree
+Go2 Air guide-robot prototype. The current system has three supported runtime
+targets:
 
-PawGuide is an autonomous event-guide prototype built from:
+- an RDK X5 beside the robot, providing the physical Go2 bridge and the
+  fail-closed HTTP gateway;
+- a China server providing the browser command center and stable relay
+  endpoints;
+- a Hyper.ai GPU container running the DimOS/MuJoCo hardware-free simulation.
 
-- a Unitree Go2 Air for sensing and locomotion;
-- an RDK X5 8 GB for the current navigation and safety runtime;
-- a Pixel 9 Pro for USB tethering now, and ring audio/TTS later;
-- an RDK S100 12 GB/80 TOPS reserved for a later perception/local-AI upgrade.
+The phone and ring are developed separately. They integrate only through the
+HTTP API defined in
+[`contracts/pawguide-openapi.json`](contracts/pawguide-openapi.json). They do
+not connect to DimOS or the Go2 directly.
 
-The first physical milestone deliberately has no LLM. A local terminal console
-on the X5 maintains the safety heartbeat and exposes only exact commands:
-`stand`, `sit`, `hello`, `goto`, `pause`, `patrol`, `home` and `stop`.
-Arbitrary velocity and arbitrary Unitree sport commands are not exposed.
+## Current physical behavior
 
-## Project questions
+The X5 is the sole normal motion gateway. Its current physical MCP bridge
+exposes reviewed posture and greeting commands plus a bounded commissioning
+route:
 
-### In a nutshell: What have you done, and for whom?
+- `home` is the assumed starting position;
+- `demo_gate` moves forward approximately one metre;
+- returning to `home` reverses the same bounded motion;
+- STOP interrupts the motion loop;
+- startup and heartbeat loss latch STOP.
 
-We built PawGuide, an accessible robotic airport-guide prototype for travelers
-who may find an unfamiliar terminal difficult to navigate, especially older,
-blind and low-vision passengers. It combines a Unitree Go2, an RDK X5 and
-DimOS with our fail-closed control layer, exact waypoint missions, operator
-tools and a simulation-qualified five-metre gate demonstration.
+This is an open-loop commissioning route, not mapped autonomous navigation.
+The Hyper simulation remains the qualified environment for the larger
+obstacle-aware concept course.
 
-### Why did you choose to work on this topic?
+## Source of truth
 
-Airport wayfinding can be stressful and particularly exclusionary when signs,
-crowds or long walking routes are hard to manage, so a guide that meets a
-traveler where they are could make assistance easier to find. A friendly
-mobile robot also gives us a concrete way to explore useful autonomy while
-keeping the first deployment bounded, supervised and fail-closed.
+Start with these documents:
 
-### What exactly is the robot doing?
+- [Current recovery runbook](docs/CURRENT_RECOVERY_RUNBOOK.md) — complete
+  rebuild and restart procedure;
+- [Deployment inventory](docs/DEPLOYMENT_INVENTORY.md) — tracked-to-installed
+  file map and external-state boundary;
+- [Runtime manifest](docs/RUNTIME_MANIFEST.md) — observed OS, package, and
+  service versions;
+- [HTTP client contract](docs/PIXEL_CLIENT.md) — app/ring integration behavior;
+- [Hyper simulation](docs/HYPER_SIMULATION.md) — simulation topology and
+  operations;
+- [Physical Go2 handoff](docs/PHYSICAL_GO2_HANDOFF.md) — current physical
+  controls and recovery;
+- [Pre-hardware acceptance](docs/PRE_HARDWARE_ACCEPTANCE.md) — retained
+  qualification evidence;
+- [X5 payload harness](docs/MOUNTING_REQUIREMENTS.md) — mounting measurements
+  and acceptance checks.
 
-In the bounded airport demonstration, PawGuide starts seated at `home`, stands
-and greets the traveler, navigates about five metres to `demo_gate`, presents
-the gate, returns home, sits and re-enters its STOP-latched idle state. It
-follows an obstacle-aware route between two pre-recorded exact waypoints; it
-does not roam freely, follow a person or improvise destinations in a crowd.
+The exact external DimOS base is pinned to commit
+`4a78e1400c4334c280970e4610c655d16b9661ae`. Its source archive and the complete
+PawGuide patch are tracked under `vendor/`.
 
-### Which DimOS capabilities have you used, and what did you develop independently?
-
-We use DimOS for the Go2 integration, local LCM streams, lidar mapping,
-obstacle-aware planning and navigation, and the loopback MCP tool bus; the
-current physical milestone does not use visual-semantic memory, voice or an
-LLM. We added the exact-match persistent waypoint skill and Go2
-LocalAP/direct-stop support, then independently built the authenticated safety
-gateway, mission supervisor and watchdog, heartbeat/arming rules, operator and
-show tooling, edge bundles, and simulation/acceptance suite.
-
-### What is remote, and what is autonomous?
-
-A nearby human operator controls the session from the X5 console today and
-from the Pixel app in the planned interaction stage: the operator supplies the
-heartbeat, explicitly arms, selects an allowed mission, confirms arrivals and
-can always request STOP. An authenticated developer path over Tailscale can
-request restricted high-level actions or STOP, but it cannot create the
-heartbeat or release STOP. Between approved waypoints, the X5 and DimOS
-autonomously plan and follow the local route and avoid obstacles, while the
-watchdog autonomously stops the robot if the operator heartbeat expires; no
-remote user steers raw velocity.
-
-### Could this be commercially viable, and who would pay for it?
-
-PawGuide has potential as a managed accessibility and wayfinding service for
-airports, large transit hubs, hospitals and event venues, although that
-business still needs real-site validation. Airport or venue operators,
-airlines and passenger-assistance contractors could pay for leased robots,
-site integration and fleet support when those costs compare favorably with
-missed journeys and purely staff-delivered routine guidance. The target users
-are passengers and visitors who want easier wayfinding, especially older,
-blind or low-vision people and anyone facing language, cognitive or
-unfamiliarity barriers.
-
-## Runtime topology
+## Repository layout
 
 ```text
-Hetzner / China development services
-               |
-           Tailscale
-               |
-Pixel USB tether -- RDK X5 -- Wi-Fi --> Go2 AP (192.168.12.1)
-                       |
-              gateway + DimOS + MCP
-                       |
-              local manual console
+src/pawguide/        gateway, supervisor, adapters, clients, acceptance tools
+contracts/           generated OpenAPI contract and local-agent schema
+config/              non-secret runtime and acceptance configuration
+provision/           X5, China, and Hyper installers and service definitions
+provision/x5/        isolated X5 simulation gateway configuration
+provision/hyper/     GPU simulation runit entrypoints and fixtures
+artifacts/           retained final acceptance evidence
+vendor/              pinned DimOS source archive and PawGuide patch
+tests/               unit, API, installer, and acceptance tests
 ```
-
-While the physical Go2 is unavailable, the active hardware-free path runs
-DimOS and MuJoCo on a Hyper.ai GPU container. The China server provides stable
-tailnet ingress for its command center and MCP endpoint, and the isolated X5
-simulation gateway treats that endpoint as the robot. See
-[Hyper.ai Go2 simulation](docs/HYPER_SIMULATION.md).
-
-Only the X5 joins the Go2 access point and only the X5 opens a Unitree WebRTC
-session. The Pixel does not run an LLM in this test phase. It supplies an
-internet/Tailscale uplink over USB; an Ethernet uplink can be used on the bench.
-The previously observed `10.88.15.7` address belongs to a different network
-mode and is not used for Go2 `LocalAP`.
-
-## Safety model
-
-There is no Unitree remote controller, so the software starts fail-closed:
-
-- the gateway boots with STOP latched and actively dispatches the stop sequence;
-- the manual console sends a local heartbeat every 500 ms;
-- movement requires a fresh heartbeat and an explicit `arm`;
-- heartbeat loss latches STOP within two seconds;
-- closing the console requests STOP immediately;
-- STOP remains callable from a second Tailscale/SSH terminal;
-- posture tests use exact `StandUp`, `Sit` and `Hello` commands;
-- waypoint IDs are exact allowlisted values;
-- neither Hetzner nor the China server owns the safety heartbeat;
-- real motion requires a credential, reachable Go2, compatible hardware profile
-  and an explicit danger acknowledgement on the X5.
-
-This is not equivalent to a hardware emergency stop. Physical tests require a
-clear area, a nearby spotter, the robot initially supported off the ground and
-a second terminal already prepared to disable real motion.
-
-## Prepared state
-
-- Hetzner and China run Tailscale-only, fail-closed mock gateways.
-- The DimOS patch supports Go2 `LocalAP`, direct emergency stop, exact persistent
-  waypoints and the MCP tool bus.
-- The X5 and future S100 have separate provisioning/readiness profiles.
-- The X5 bundle carries the gateway wheel, pinned dependency list, pinned DimOS
-  snapshot, reviewed patch, systemd units and motion enable/disable scripts.
-- The local `pawguide-operator` console has no model or cloud dependency.
 
 ## Development
 
 ```bash
-uv venv --python 3.12
-source .venv/bin/activate
-uv pip install -e '.[dev]'
-pytest
+uv sync --extra dev
+uv run pytest
 ```
 
-Build the current X5 artifact:
+Build the X5 recovery bundle from a clean checkout. The pinned DimOS source
+archive is already tracked:
 
 ```bash
 ./provision/build-edge-bundle.sh
 sha256sum dist/pawguide-x5-mvp.tar.gz
 ```
 
-The future S100 artifact remains reproducible:
-
-```bash
-./provision/build-edge-bundle.sh s100
-```
-
-## Start here
-
-- [MacBook Codex provisioning handoff](docs/MACBOOK_CODEX_HANDOFF.md)
-- [First motion test](docs/FIRST_MOTION_TEST.md)
-- [X5 installation and deployment](docs/MVP_DEPLOYMENT.md)
-- [X5 harness requirements](docs/MOUNTING_REQUIREMENTS.md)
-- [DimOS operations](docs/DIMOS_OPERATIONS.md)
-- [Hyper.ai Go2 simulation](docs/HYPER_SIMULATION.md)
-- [Physical Go2 handoff](docs/PHYSICAL_GO2_HANDOFF.md)
-- [S100 future deployment](docs/S100_DEPLOYMENT.md)
-- [S100 local-AI track](docs/S100_LOCAL_AI.md)
+Secrets are never stored in this repository. The recovery runbook lists every
+required credential, its installed location, and how to restore or reissue it.

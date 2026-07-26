@@ -6,7 +6,7 @@
 
   "grants": [
     {
-      // Hetzner can call the X5 application bridge and administer it.
+      // Approved development hosts can call and administer the X5 bridge.
       "src": ["tag:pawguide-dev"],
       "dst": ["tag:pawguide-edge"],
       "ip": ["tcp:22", "tcp:8765"],

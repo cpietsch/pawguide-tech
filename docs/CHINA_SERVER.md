@@ -1,100 +1,124 @@
-# China development server
+# China server operations
 
-The current admin/nginx and X5-token recovery procedure is in
-[CURRENT_RECOVERY_RUNBOOK.md](CURRENT_RECOVERY_RUNBOOK.md). The mock gateway
-deployer below is only one part of the complete China rebuild.
+The China server provides the PawGuide browser command center, a non-moving
+development gateway, and stable relays to the Hyper simulation. It never opens
+the physical Go2 WebRTC connection; that belongs to the X5.
 
-## Role
+The complete disaster-recovery sequence is in
+[`CURRENT_RECOVERY_RUNBOOK.md`](CURRENT_RECOVERY_RUNBOOK.md). This file covers
+normal operation of an already provisioned server.
 
-The Aliyun Hangzhou server is PawGuide's in-region development, integration and
-tailnet relay node. It hosts the same authenticated HTTP gateway contract used
-by Hetzner and the physical X5, but it deliberately runs `MockRobotAdapter`.
-During hardware-free testing it also relays command-center and MCP traffic to
-the Hyper.ai GPU simulator:
+## Services and files
+
+| Component | Installed path |
+| --- | --- |
+| Development gateway unit | `/etc/systemd/system/pawguide-china-gateway.service` |
+| Development gateway environment | `/etc/pawguide/pawguide.env` |
+| Current Python release | `/opt/pawguide/current` |
+| Admin nginx site | `/etc/nginx/sites-available/pawguide-admin` |
+| Dashboard document | `/var/www/pawguide/dashboard.html` |
+| Dashboard JavaScript | `/var/www/pawguide/dashboard.js` |
+| Hyper relay unit | `/etc/systemd/system/pawguide-hyper-tunnel.service` |
+| Mirrored X5 operator credential | `/etc/pawguide/x5-operator.token` |
+| Generated nginx auth include | `/etc/pawguide/nginx-operator-auth.conf` |
+| Hyper SSH identity | `/root/.ssh/pawguide_gpu_server` |
+
+The tracked counterparts and parity checks are listed in
+[`DEPLOYMENT_INVENTORY.md`](DEPLOYMENT_INVENTORY.md).
+
+## Endpoints
 
 ```text
-developer / prototype agent
-             |
-         Tailscale
-             |
-China gateway (mock, no motion)
-
-browser / X5 simulation gateway
-             |
-         Tailscale
-             |
-China nginx + persistent SSH tunnel
-             |
-Hyper.ai DimOS + MuJoCo
-
-Local heartbeat + X5 safety + DimOS + Go2 remain an edge-only runtime.
+http://100.102.208.90:7780/command-center
+http://100.102.208.90:7780/admin/status/x5
+http://100.102.208.90:7780/admin/api/physical/
+http://100.102.208.90:7780/admin/api/sim/
+http://100.102.208.90:9991/mcp
+http://100.102.208.90:9879
 ```
 
-The China server is suitable for API integration, local-agent experiments,
-artifact distribution, simulation relay and later in-region telemetry. It
-must never become the physical Go2 WebRTC peer or the source of the local
-safety heartbeat. Selecting the RDK X5 for the moving MVP does not change this
-boundary. See [Hyper.ai Go2 simulation](HYPER_SIMULATION.md) for the active
-simulation topology.
+The command center is a tokenless browser kiosk. Nginx adds the X5 operator
+credential to the physical API request on the server. The browser never
+receives that credential.
 
-## Deployment
+## Routine checks
 
-From the Hetzner development server:
+```bash
+systemctl is-active \
+  tailscaled nginx pawguide-china-gateway pawguide-hyper-tunnel
+nginx -t
+curl -fsS http://100.102.208.90:8765/health
+curl -fsS http://100.102.208.90:7780/admin/status/x5
+curl -fsS http://100.102.208.90:7780/command-center >/dev/null
+curl -fsS http://100.102.208.90:9991/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"tools","method":"tools/list","params":{}}'
+```
+
+Logs:
+
+```bash
+journalctl -u pawguide-china-gateway -n 100 --no-pager
+journalctl -u pawguide-hyper-tunnel -n 100 --no-pager
+journalctl -u nginx -n 100 --no-pager
+```
+
+The local development gateway binds to the server's private network address,
+not loopback. Use that address when checking it directly.
+
+## Deploy application changes
+
+From an authenticated external deployment host:
+
+```bash
+PAWGUIDE_CHINA_IDENTITY=/secure/path/china-key \
+  provision/deploy-china-dev.sh
+```
+
+The deployer builds a wheel, uploads a staged release, installs locked
+dependencies, atomically changes `/opt/pawguide/current`, restarts the gateway,
+and verifies `/health`. Older release directories are rollback material and
+are not source-of-truth code.
+
+Dashboard or nginx changes are installed on the server from its repository
+checkout:
 
 ```bash
 cd /root/pawguide
-sudo ./provision/deploy-china-dev.sh
+git pull --ff-only
+sudo provision/install-china-admin.sh
 ```
 
-The deployer:
-
-1. runs the PawGuide test suite and builds the current wheel;
-2. creates a content-addressed source and runtime release;
-3. repairs the server's persistent DNS, APT and pip mirror configuration if
-   necessary;
-4. installs dependencies into an isolated Python 3.12 virtual environment;
-5. generates or preserves separate operator and developer credentials;
-6. binds the service only to the China node's Tailscale IPv4 address;
-7. enables `pawguide-china-gateway.service` in mock mode.
-
-The China-specific developer credential remains at
-`/etc/pawguide/china-dev.token` on Hetzner and
-`/etc/pawguide/dev.token` on the China server. Do not paste either value into
-source, shell history, logs or chat.
-
-## Operations
-
-On the China server:
+After rotating the X5 operator credential:
 
 ```bash
-systemctl status pawguide-china-gateway.service
-journalctl -u pawguide-china-gateway.service -f
-curl -fsS http://100.102.208.90:8765/health
-readlink -f /opt/pawguide/current
-readlink -f /srv/pawguide/current
+cd /root/pawguide
+sudo provision/sync-x5-operator-token.sh
+sudo provision/install-china-admin.sh
 ```
 
-From Hetzner, use the packaged client without exposing the credential:
+The synchronization script streams the credential without printing it.
+
+## Shutdown
+
+Before shutting down the server, confirm the physical X5 is STOP-latched:
 
 ```bash
-export PAWGUIDE_GATEWAY_URL=http://100.102.208.90:8765
-export PAWGUIDE_DEV_TOKEN_FILE=/etc/pawguide/china-dev.token
-/root/pawguide/.venv312/bin/pawguide-client state
-/root/pawguide/.venv312/bin/pawguide-client stop
+curl -fsS \
+  http://100.102.208.90:7780/admin/api/physical/v1/state
 ```
 
-The developer role may inspect state, request mock missions and always request
-STOP. It cannot send the operator heartbeat or clear the fail-closed stop latch.
+The required final fields are:
 
-## Security invariants
+```json
+{
+  "stop_latched": true,
+  "operator_heartbeat_fresh": false,
+  "mission_state": "stopped",
+  "active_waypoint": null
+}
+```
 
-- TCP 8765 is not opened in UFW and is not bound to the public interface.
-- Physical motion stays disabled with both `PAWGUIDE_ADAPTER=mock` and
-  `PAWGUIDE_ENABLE_REAL_MOTION=NO`.
-- The operator credential stays on the China server. Hetzner receives only the
-  China-specific developer credential.
-- Deployments create immutable release directories and atomically update the
-  `/opt/pawguide/current` and `/srv/pawguide/current` symlinks.
-- DimOS and raw Unitree WebRTC are not installed on this server.
-- The active simulator runs on Hyper.ai. The retained local DimOS environment
-  is rollback-only and is not an active service.
+The X5 physical gateway continues to own its local STOP/watchdog behavior when
+the China server is unavailable. Browser control and the Hyper relay are
+unavailable until the China services return.

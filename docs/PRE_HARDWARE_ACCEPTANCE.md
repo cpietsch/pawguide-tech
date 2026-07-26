@@ -86,13 +86,14 @@ The live operator view is:
 - full-screen 3D viewer:
   `http://100.102.208.90:9879/?url=rerun%2Bhttp%3A%2F%2F100.102.208.90%3A9879%2Fproxy`
 
-The command center reads the consolidated artifact, not browser video. Rerun
-is the primary visualization, which avoids sending unnecessary rendered image
-frames through the China relay.
+The consolidated artifact in GitHub is the authoritative result. Rerun is the
+primary engineering visualization, which avoids sending unnecessary rendered
+image frames through the China relay.
 
 ## Concept traceability
 
-The simulation now proves the motion and gateway parts of `concept.md`:
+The simulation proves the motion and gateway parts of
+[`PRODUCT_SCOPE.md`](PRODUCT_SCOPE.md):
 
 - exact `home` and `demo_gate` allowlisting, with arbitrary destinations and
   raw velocity rejected;

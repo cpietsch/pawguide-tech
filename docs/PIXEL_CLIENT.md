@@ -1,87 +1,33 @@
-# Pixel client contract
+# Phone and ring client contract
 
-This is a deferred interaction-stage contract. The first X5 motion test uses
-the local `pawguide-operator` console and runs no LLM.
+The phone and ring application is maintained in a separate repository. This
+document defines its complete PawGuide integration boundary. The
+machine-readable source of truth is
+[`../contracts/pawguide-openapi.json`](../contracts/pawguide-openapi.json).
 
-The Pixel owns the human interaction loop. It receives ring button events and
-ring microphone audio, performs speech recognition and language inference
-locally, speaks through the phone, and calls the X5 gateway over the USB-tether
-network. The Pixel never opens a Unitree WebRTC session.
-
-The physical data path is X5 USB-A host to Pixel USB-C. The X5 USB-C power
-input remains dedicated to a stable 5 V/5 A supply.
-
-The ring transport is intentionally an adapter boundary until its BLE/audio
-protocol is specified. Accelerometer gestures are outside the first MVP.
-
-The selected inference host is LiteRT-LM's stable Kotlin API, with AI Edge
-Gallery used for model benchmarking rather than as the PawGuide safety app.
-See `PIXEL_IMPLEMENTATION.md`.
+The app calls the X5 gateway over its local/private network path. It never
+opens a Unitree WebRTC connection, sends MCP directly, or controls raw
+velocity. Ring transport, audio, haptics, inference, and UI implementation are
+outside this repository.
 
 ## Authority split
 
-| Operation | Pixel operator token | Hetzner developer token | Local model |
-|---|---:|---:|---:|
-| Heartbeat | yes | no | no |
-| Reset stop latch | yes | no | no |
+| Operation | Operator credential | Developer credential | Model output |
+| --- | ---: | ---: | ---: |
+| Read capabilities and state | yes | yes | no direct access |
+| Maintain heartbeat | yes | no | no |
+| Reset STOP latch | yes | no | no |
 | STOP | yes | yes | bypassed |
-| Pause, waypoint, patrol, home | yes | yes | proposes only |
-| Raw velocity, arbitrary trick | unavailable | unavailable | unavailable |
+| Submit other allowlisted commands | yes | restricted subset | proposes only |
+| Raw velocity or arbitrary sport command | unavailable | unavailable | unavailable |
 
-The inference adapter produces only data matching
-`contracts/local-agent-output.schema.json`. Native LiteRT-LM tool calls are
-normalized to that shape; a model without native tool support must emit the
-same shape directly. The Android host validates it, checks a requested waypoint
-against `/v1/capabilities`, creates a UUID, and then calls `/v1/commands`. The
-model is never given a generic HTTP or MCP tool.
+Any language or intent model may produce only data matching
+[`../contracts/local-agent-output.schema.json`](../contracts/local-agent-output.schema.json).
+The app validates that output, checks current gateway capabilities, and creates
+the command UUID. A model never receives generic HTTP, MCP, heartbeat, arming,
+or STOP tools.
 
-## Operator state machine
-
-```text
-DISCONNECTED
-    │ ring audio/button + USB gateway healthy
-    ▼
-CONNECTED_STOPPED ── heartbeat every 500 ms
-    │ explicit operator arm action
-    │ POST heartbeat, then RESET_STOP
-    ▼
-ARMED ── PTT → local ASR → deterministic safety router → local model
-    │
-    ├── STOP intent/button → POST STOP immediately, then speak
-    ├── model command → validate schema + capabilities → POST command
-    └── ring/USB/app loss → stop heartbeat → X5 latches stop ≤ 2 s
-```
-
-There is no inferred arming. Until the ring specification defines a deliberate
-button gesture, the app must remain in `CONNECTED_STOPPED`. Arming, STOP,
-heartbeat and stop reset are application logic and must never depend on model
-output.
-
-## PTT pipeline
-
-1. Button down starts capture from the ring microphone and acknowledges locally
-   when the ring protocol supports haptics.
-2. Button release ends capture and runs on-device ASR.
-3. Normalize the transcript. A direct STOP intent takes the deterministic STOP
-   path before any LLM call.
-4. Other input is passed to the local model with only the four allowlisted
-   manual tools, or with the strict output schema for a non-tool model.
-5. `reply` output goes only to on-device TTS.
-6. `command` output is checked against current gateway capabilities and sent to
-   the X5. Speak success only after `accepted=true`.
-
-If inference fails, times out, emits invalid JSON or names an unavailable
-waypoint, do not move. Speak a short failure response.
-
-## HTTP contract
-
-The generated API is `contracts/pawguide-openapi.json`. All protected requests
-use:
-
-```http
-Authorization: Bearer <operator token>
-Content-Type: application/json
-```
+## Connection and safety state
 
 On connection:
 
@@ -91,41 +37,90 @@ GET /v1/capabilities
 GET /v1/state
 ```
 
-The client must reject a deployment while `/health` reports
-`motion_capable=false` if a physical-motion test is expected. The current
-Hetzner and bundled X5 services intentionally report the mock adapter.
+The app must read capabilities instead of assuming an action or waypoint is
+available. A physical session requires `motion_capable=true`.
 
-Heartbeat:
+The operator heartbeat payload is:
 
 ```json
-{"source":"pixel-ring-operator"}
+{"source":"phone-ring-operator"}
 ```
 
-Send it to `POST /v1/heartbeat` every 500 ms using a monotonic scheduler. Do not
-continue heartbeats while the ring link, USB gateway link, foreground operator
-session or app safety state is unhealthy.
+Send it to `POST /v1/heartbeat` every 500 ms with a monotonic scheduler. Stop
+sending it whenever the foreground operator session, phone-to-X5 link, or app
+safety state is unhealthy. The X5 then latches STOP within the advertised
+timeout.
 
-Command:
+There is no inferred arming. Resetting STOP and maintaining the heartbeat are
+deterministic application behavior, never model behavior. From any active
+state, a STOP request bypasses speech and inference.
+
+## Commands and retries
+
+Protected requests use:
+
+```http
+Authorization: Bearer <operator credential>
+Content-Type: application/json
+```
+
+Example bounded physical destination command:
 
 ```json
 {
-  "command_id": "9921f88d-04c4-44e9-830f-a83fcfddf8a1",
+  "command_id": "3411c2be-1761-49eb-8870-9d7bf20b8119",
   "action": "go_to_waypoint",
-  "arguments": {"waypoint_id":"demo_a"}
+  "arguments": {
+    "waypoint_id": "demo_gate"
+  }
 }
 ```
 
-Reuse the same `command_id` when retrying an uncertain HTTP response. The X5
-caches recent results, preventing duplicate execution.
+Reuse the same `command_id` when retrying an uncertain response. The gateway
+caches recent results to prevent duplicate execution.
 
-## Remaining ring-specific inputs
+`accepted=true` means the action was accepted and dispatched. It is not proof
+that a physical movement or gesture completed. Until the gateway exposes a
+normalized completion event, the app must not chain physical actions solely
+from that response or from a fixed delay.
 
-Implementation can begin when the ring handoff supplies:
+The API action enum is:
 
-- BLE service/characteristic UUIDs and button event encoding;
-- microphone transport/profile, codec, sample rate and Android routing behavior;
-- haptic command encoding;
-- reconnect semantics and battery reporting;
-- accelerometer sample/event format.
+```text
+stop
+pause
+reset_stop
+stand_up
+sit_down
+greeting
+go_to_waypoint
+start_patrol
+return_home
+```
 
-None of those details changes the X5 API or local-agent JSON schema.
+Capabilities and role restrictions remain authoritative. In the current
+physical profile, `home` and `demo_gate` are the only waypoint IDs and
+`start_patrol` is omitted from the advertised/accepted actions because the
+direct Go2 bridge does not implement it.
+
+## Browser command center exception
+
+The China command center is an operator-only kiosk. The browser does not hold
+or request a credential; China nginx injects the X5 operator credential
+server-side for the physical API route. This convenience is specific to that
+private admin surface and does not change the app-facing authentication
+contract.
+
+## Integration acceptance
+
+The app/ring integration is ready only when it proves:
+
+1. connection validation against health, capabilities, and state;
+2. a monotonic 500 ms heartbeat during a healthy operator session;
+3. heartbeat termination on app, link, or ring-session loss;
+4. deterministic STOP without inference;
+5. no automatic reset after STOP;
+6. exact action and waypoint validation;
+7. UUID reuse for uncertain retries;
+8. no action chaining based only on command acceptance;
+9. token values remain outside logs, analytics, screenshots, and source.

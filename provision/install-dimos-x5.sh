@@ -107,20 +107,8 @@ install \
   -o root \
   -g root \
   -m 0755 \
-  "${script_dir}/run-dimos-local-ap.py" \
-  /opt/pawguide/bin/run-dimos-local-ap.py
-install \
-  -o root \
-  -g root \
-  -m 0755 \
   "${script_dir}/direct-go2-mcp.py" \
   /opt/pawguide/bin/direct-go2-mcp.py
-install \
-  -o root \
-  -g root \
-  -m 0755 \
-  "${script_dir}/tag-waypoint.py" \
-  /opt/pawguide/bin/tag-waypoint.py
 install \
   -o root \
   -g root \
@@ -153,19 +141,6 @@ install \
   -m 0644 \
   "${script_dir}/pawguide-dimos.service" \
   /etc/systemd/system/pawguide-dimos.service
-install \
-  -o root \
-  -g root \
-  -m 0755 \
-  "${script_dir}/configure-lcm-network.sh" \
-  /opt/pawguide/bin/configure-lcm-network.sh
-install \
-  -o root \
-  -g root \
-  -m 0644 \
-  "${script_dir}/pawguide-lcm-network.service" \
-  /etc/systemd/system/pawguide-lcm-network.service
-
 printf 'x5\n' > /etc/pawguide/hardware-profile
 chown root:pawguide /etc/pawguide/hardware-profile
 chmod 0640 /etc/pawguide/hardware-profile

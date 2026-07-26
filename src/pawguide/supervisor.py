@@ -22,6 +22,7 @@ from pawguide.models import (
 @dataclass(frozen=True)
 class SupervisorConfig:
     allowed_waypoints: frozenset[str]
+    allowed_actions: frozenset[Action] = frozenset(Action)
     home_waypoint: str = "home"
     operator_heartbeat_timeout_s: float = 2.0
     command_cache_size: int = 256
@@ -65,6 +66,10 @@ class SafetySupervisor:
         return self._config.allowed_waypoints
 
     @property
+    def allowed_actions(self) -> frozenset[Action]:
+        return self._config.allowed_actions
+
+    @property
     def operator_heartbeat_timeout_s(self) -> float:
         return self._config.operator_heartbeat_timeout_s
 
@@ -91,18 +96,6 @@ class SafetySupervisor:
             self._latch_stop("operator_heartbeat_timeout")
         return self.snapshot()
 
-    def tag_waypoint(self, waypoint_id: str) -> str:
-        """Store an allowlisted pose only under a fresh, latched-STOP lease."""
-        with self._mission_lock:
-            with self._lock:
-                if waypoint_id not in self._config.allowed_waypoints:
-                    raise ValueError("waypoint_not_allowed")
-                if not self._stop_latched:
-                    raise ValueError("stop_must_be_latched_for_waypoint_tagging")
-                if not self._heartbeat_fresh():
-                    raise ValueError("fresh_operator_heartbeat_required")
-            return self._adapter.tag_waypoint(waypoint_id)
-
     def submit(self, command: CommandEnvelope) -> CommandResult:
         if command.action is Action.STOP:
             with self._lock:
@@ -127,7 +120,9 @@ class SafetySupervisor:
             if cached is not None:
                 return cached
 
-            if command.action is Action.RESET_STOP:
+            if command.action not in self._config.allowed_actions:
+                result = self._reject(command, "action_not_allowed")
+            elif command.action is Action.RESET_STOP:
                 result = self._handle_reset(command)
             elif self._stop_latched:
                 result = self._reject(command, "stop_is_latched")

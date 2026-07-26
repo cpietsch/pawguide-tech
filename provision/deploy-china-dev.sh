@@ -83,7 +83,6 @@ tar \
   config \
   contracts \
   docs \
-  pixel \
   provision \
   src \
   tests

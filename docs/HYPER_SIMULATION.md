@@ -12,11 +12,12 @@ As of 2026-07-25, the hardware-free Go2 test runtime is:
 ```text
 browser
   |
-  | Tailscale HTTP :7780
+  | private HTTP :7780
   v
 China server (100.102.208.90)
-  |  nginx -> SSH local forward -> Hyper command center :7779
+  |  static physical command center -> X5 gateway :8765
   |  MCP :9991 -> SSH local forward -> Hyper MCP relay :9991
+  |  Rerun :9879 -> SSH local forwards -> Hyper :9877/:9878
   |
   +---------------- SSH, persistent -------------------+
                                                        |
@@ -28,11 +29,11 @@ Hyper.ai GPU container
 X5 safety gateway :8876 -> loopback MCP relay ---------+
 ```
 
-All simulation compute runs on Hyper.ai. The China server is a thin,
-Tailscale-reachable relay so the X5 and browser retain stable addresses. The
-X5 remains the safety boundary: its isolated simulation gateway owns arming,
-heartbeat and STOP state. The production mock gateway on port 8765 is
-separate and must remain untouched.
+All simulation compute runs on Hyper.ai. The China server is a thin relay so
+the X5 and browser retain stable addresses. The X5 remains the gateway
+boundary: its isolated simulation gateway owns heartbeat and STOP state. The
+physical gateway on port 8765 is separate and must remain untouched by
+simulation work.
 
 ## Endpoints
 
@@ -43,7 +44,7 @@ separate and must remain untouched.
 | Live 3D viewer | `http://100.102.208.90:9879/?url=rerun%2Bhttp%3A%2F%2F100.102.208.90%3A9879%2Fproxy` |
 | Relayed DimOS MCP | `http://100.102.208.90:9991/mcp` |
 | X5 simulation gateway | `http://100.72.30.53:8876` |
-| X5 production mock gateway | `http://100.72.30.53:8765` |
+| X5 physical gateway | `http://100.72.30.53:8765` |
 
 Use the dedicated local key at `/root/.ssh/pawguide_gpu_server` for Hyper SSH.
 Never commit the private key.
@@ -168,9 +169,9 @@ Systemd supervises `pawguide-hyper-tunnel.service`. It forwards:
 100.102.208.90:9991   -> Hyper 127.0.0.1:9991
 ```
 
-Nginx listens on `100.102.208.90:7780`, proxies the command center to
-`127.0.0.1:17779`, and rewrites the frontend's hard-coded localhost HTTP and
-WebSocket URLs to the tailnet address.
+Nginx listens on `100.102.208.90:7780` and serves the tracked physical command
+center. Its fallback route proxies Hyper's DimOS web surface through
+`127.0.0.1:17779`. Rerun is exposed separately on `:9879`.
 
 Check the relay with:
 
@@ -228,7 +229,7 @@ is `artifacts/concept-pre-hardware-acceptance.json`.
 
 ## Operations
 
-The Tailscale command center is now a tokenless physical-control kiosk. It
+The command center is a tokenless physical-control kiosk. It
 proxies the existing X5 API while storing the required X5 operator credential
 only in a root-owned nginx include on the China server:
 
@@ -280,22 +281,11 @@ dispatch, MCP registration, command-center transport and the X5 safety path
 are verified; do not interpret missing simulated battery telemetry as a real
 Go2 readiness result.
 
-## Rollback
+## Recovery
 
-The former simulator environment and patched source remain on the China
-server:
+Restore the tracked Hyper runit scripts and one matching fixture/environment
+pair, then restart both runit services. The complete package, credential,
+relay, and verification sequence is in
+[`CURRENT_RECOVERY_RUNBOOK.md`](CURRENT_RECOVERY_RUNBOOK.md).
 
-```text
-/root/dimos-replay-venv
-/tmp/pawguide-dimos-replay.51pSq2
-```
-
-Rollback is manual:
-
-1. STOP and latch the X5 simulation gateway.
-2. Stop `pawguide-hyper-tunnel.service`.
-3. Restart the former China simulator and its MCP listener.
-4. Restore the former nginx upstream from port 17779 to port 7779.
-5. Verify all 17 MCP tools before rearming.
-
-Never run both simulators behind the same `100.102.208.90:9991` endpoint.
+Never run two simulators behind the same `100.102.208.90:9991` endpoint.

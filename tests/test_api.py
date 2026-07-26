@@ -8,6 +8,7 @@ import pytest
 
 from pawguide.adapter import MockRobotAdapter
 from pawguide.app import _tokens_from_env, create_app
+from pawguide.models import Action
 from pawguide.supervisor import SafetySupervisor, SupervisorConfig
 
 
@@ -76,6 +77,54 @@ def test_capabilities_are_explicit_about_mock_mode_and_roles() -> None:
     asyncio.run(exercise_api())
 
 
+def test_capabilities_and_dispatch_respect_the_runtime_action_allowlist() -> None:
+    supervisor = SafetySupervisor(
+        MockRobotAdapter(),
+        SupervisorConfig(
+            allowed_waypoints=frozenset({"home"}),
+            allowed_actions=frozenset(
+                {Action.STOP, Action.RESET_STOP, Action.STAND_UP}
+            ),
+        ),
+    )
+    app = create_app(
+        supervisor=supervisor,
+        operator_token="operator-token",
+        dev_token="dev-token",
+    )
+
+    async def exercise_api() -> None:
+        async with app.router.lifespan_context(app):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="http://testserver",
+                headers={"Authorization": "Bearer operator-token"},
+            ) as client:
+                capabilities = (await client.get("/v1/capabilities")).json()
+                assert capabilities["operator_actions"] == [
+                    "stop",
+                    "reset_stop",
+                    "stand_up",
+                ]
+                await client.post(
+                    "/v1/heartbeat",
+                    json={"source": "allowlist-test"},
+                )
+                rejected = await client.post(
+                    "/v1/commands",
+                    json={
+                        "command_id": "efb22d79-6c6b-4f0e-b9ae-0eb4e66cf98b",
+                        "action": "start_patrol",
+                        "arguments": {},
+                    },
+                )
+                assert rejected.status_code == 200
+                assert rejected.json()["accepted"] is False
+                assert rejected.json()["reason"] == "action_not_allowed"
+
+    asyncio.run(exercise_api())
+
+
 def test_dev_client_cannot_heartbeat_or_release_stop() -> None:
     app, _supervisor = make_app()
 
@@ -114,40 +163,6 @@ def test_dev_client_cannot_heartbeat_or_release_stop() -> None:
                 assert stop.json()["accepted"] is True
 
     asyncio.run(exercise_api())
-
-
-def test_operator_can_tag_exact_waypoint_only_while_stop_is_latched() -> None:
-    async def scenario() -> None:
-        app, _supervisor = make_app()
-        async with app.router.lifespan_context(app):
-            async with AsyncClient(
-                transport=ASGITransport(app=app),
-                base_url="http://test",
-                headers={"Authorization": "Bearer operator-token"},
-            ) as client:
-                await client.post(
-                    "/v1/heartbeat",
-                    json={"source": "commissioning-test"},
-                )
-                tagged = await client.post(
-                    "/v1/commissioning/waypoints/home",
-                    json={"confirm_stationary": True},
-                )
-                denied_confirmation = await client.post(
-                    "/v1/commissioning/waypoints/home",
-                    json={"confirm_stationary": False},
-                )
-                denied_waypoint = await client.post(
-                    "/v1/commissioning/waypoints/not-allowed",
-                    json={"confirm_stationary": True},
-                )
-
-                assert tagged.status_code == 200
-                assert tagged.json()["stored"] is True
-                assert denied_confirmation.status_code == 422
-                assert denied_waypoint.status_code == 409
-
-    asyncio.run(scenario())
 
 
 def test_operator_arms_locally_before_dev_starts_a_mission() -> None:

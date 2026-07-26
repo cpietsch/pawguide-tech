@@ -23,8 +23,6 @@ from pawguide.models import (
     GatewayHealth,
     Heartbeat,
     SupervisorSnapshot,
-    WaypointTagRequest,
-    WaypointTagResult,
 )
 from pawguide.secrets import read_secret
 from pawguide.supervisor import SafetySupervisor, SupervisorConfig
@@ -37,6 +35,24 @@ def _waypoints_from_env() -> frozenset[str]:
     values = frozenset(value.strip() for value in raw.split(",") if value.strip())
     if "home" not in values:
         values = values | {"home"}
+    return values
+
+
+def _actions_from_env() -> frozenset[Action]:
+    raw = os.getenv(
+        "PAWGUIDE_ACTIONS",
+        ",".join(action.value for action in Action),
+    )
+    try:
+        values = frozenset(
+            Action(value.strip())
+            for value in raw.split(",")
+            if value.strip()
+        )
+    except ValueError as exc:
+        raise RuntimeError("PAWGUIDE_ACTIONS contains an unknown action") from exc
+    if Action.STOP not in values:
+        values = values | {Action.STOP}
     return values
 
 
@@ -76,7 +92,10 @@ def _supervisor_from_env() -> tuple[SafetySupervisor, str, bool]:
 
     supervisor = SafetySupervisor(
         adapter,
-        SupervisorConfig(allowed_waypoints=_waypoints_from_env()),
+        SupervisorConfig(
+            allowed_waypoints=_waypoints_from_env(),
+            allowed_actions=_actions_from_env(),
+        ),
     )
     return supervisor, adapter_mode, motion_capable
 
@@ -170,9 +189,18 @@ def create_app(
             api_version=__version__,
             adapter=adapter_mode,
             motion_capable=motion_capable,
-            operator_actions=list(Action),
+            operator_actions=[
+                action
+                for action in Action
+                if action in active_supervisor.allowed_actions
+            ],
             developer_actions=[
-                action for action in Action if action is not Action.RESET_STOP
+                action
+                for action in Action
+                if (
+                    action in active_supervisor.allowed_actions
+                    and action is not Action.RESET_STOP
+                )
             ],
             allowed_waypoints=sorted(active_supervisor.allowed_waypoints),
             heartbeat_period_ms=500,
@@ -214,29 +242,6 @@ def create_app(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(exc),
             ) from exc
-
-    @app.post(
-        "/v1/commissioning/waypoints/{waypoint_id}",
-        dependencies=[Depends(require_operator)],
-        response_model=WaypointTagResult,
-    )
-    def tag_waypoint(
-        waypoint_id: str,
-        _confirmation: WaypointTagRequest,
-    ) -> WaypointTagResult:
-        try:
-            detail = active_supervisor.tag_waypoint(waypoint_id)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=str(exc),
-            ) from exc
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="waypoint_tagging_failed",
-            ) from exc
-        return WaypointTagResult(waypoint_id=waypoint_id, detail=detail)
 
     return app
 

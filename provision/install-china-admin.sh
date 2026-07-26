@@ -24,11 +24,6 @@ install \
   -m 0644 \
   "${script_dir}/pawguide-admin-dashboard.js" \
   /var/www/pawguide/dashboard.js
-if [[ ! -e /var/www/pawguide/acceptance.json ]]; then
-  printf '{}\n' >/var/www/pawguide/acceptance.json
-  chmod 0644 /var/www/pawguide/acceptance.json
-fi
-
 install \
   -o root \
   -g root \

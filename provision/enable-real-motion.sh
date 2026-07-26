@@ -17,22 +17,13 @@ if [[ ! -r "${profile_path}" ]]; then
   exit 1
 fi
 hardware_profile="$(<"${profile_path}")"
-case "${hardware_profile}" in
-  x5)
-    # shellcheck source=rdk-x5-platform.sh
-    source "${script_dir}/rdk-x5-platform.sh"
-    pawguide_require_rdk_x5
-    ;;
-  s100)
-    # shellcheck source=rdk-s100-platform.sh
-    source "${script_dir}/rdk-s100-platform.sh"
-    pawguide_require_rdk_s100
-    ;;
-  *)
-    echo "Unknown PawGuide hardware profile: ${hardware_profile}" >&2
-    exit 1
-    ;;
-esac
+if [[ "${hardware_profile}" != "x5" ]]; then
+  echo "Expected PawGuide hardware profile x5; found ${hardware_profile}." >&2
+  exit 1
+fi
+# shellcheck source=rdk-x5-platform.sh
+source "${script_dir}/rdk-x5-platform.sh"
+pawguide_require_rdk_x5
 environment_path=/etc/pawguide/pawguide.env
 # shellcheck disable=SC1090
 source "${environment_path}"

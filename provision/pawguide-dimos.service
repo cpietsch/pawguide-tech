@@ -1,7 +1,7 @@
 [Unit]
-Description=PawGuide local DimOS navigation stack
-After=network-online.target NetworkManager.service pawguide-lcm-network.service
-Wants=network-online.target pawguide-lcm-network.service
+Description=PawGuide direct physical Go2 MCP bridge
+After=network-online.target NetworkManager.service
+Wants=network-online.target
 ConditionPathExists=/etc/pawguide/unitree-aes.token
 
 [Service]

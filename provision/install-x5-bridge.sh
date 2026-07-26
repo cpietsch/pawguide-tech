@@ -74,6 +74,11 @@ if [[ ! -e /etc/pawguide/pawguide.env ]]; then
     "s/PAWGUIDE_BIND_HOST=replace-with-bind-address/PAWGUIDE_BIND_HOST=0.0.0.0/" \
     /etc/pawguide/pawguide.env
 fi
+if ! grep -q '^PAWGUIDE_ACTIONS=' /etc/pawguide/pawguide.env; then
+  printf '%s\n' \
+    'PAWGUIDE_ACTIONS=stop,pause,reset_stop,stand_up,sit_down,greeting,go_to_waypoint,return_home' \
+    >>/etc/pawguide/pawguide.env
+fi
 
 printf 'x5\n' > /etc/pawguide/hardware-profile
 chown root:pawguide /etc/pawguide/hardware-profile

@@ -188,10 +188,11 @@ if [[ "${adapter_mode}" == "dimos_mcp" ]]; then
     http://127.0.0.1:9990/mcp |
     /opt/dimos/bin/python \
       /opt/pawguide/bin/check-dimos-tools.py \
+      --physical-minimal \
       --quiet; then
-    pass "DimOS MCP endpoint exposes every required PawGuide tool"
+    pass "physical MCP exposes the required direct-Go2 tools"
   else
-    fail "DimOS MCP endpoint is unavailable or missing required tools"
+    fail "physical MCP is unavailable or missing direct-Go2 tools"
   fi
 elif systemctl is-active --quiet pawguide-dimos.service; then
   warn "DimOS physical service is active while the gateway is not using it"

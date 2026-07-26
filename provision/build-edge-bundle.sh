@@ -7,24 +7,26 @@ uv_bin="${UV_BIN:-uv}"
 dimos_source_dir="${DIMOS_SOURCE_DIR:-/root/dimos}"
 dimos_commit="4a78e1400c4334c280970e4610c655d16b9661ae"
 hardware_target="${1:-x5}"
-case "${hardware_target}" in
-  x5 | s100) ;;
-  *)
-    echo "Usage: $0 [x5|s100]" >&2
-    exit 2
-    ;;
-esac
-bundle_name="pawguide-${hardware_target}-mvp"
+if [[ "${hardware_target}" != "x5" ]]; then
+  echo "Usage: $0 [x5]" >&2
+  exit 2
+fi
+bundle_name="pawguide-x5-mvp"
 
 cd "${project_dir}"
-if [[ "$(git -C "${dimos_source_dir}" rev-parse HEAD)" != "${dimos_commit}" ]]; then
-  echo "DimOS source is not at the pinned PawGuide commit." >&2
+if [[ -d "${dimos_source_dir}/.git" ]]; then
+  if [[ "$(git -C "${dimos_source_dir}" rev-parse HEAD)" != "${dimos_commit}" ]]; then
+    echo "DimOS source is not at the pinned PawGuide commit." >&2
+    exit 1
+  fi
+  GIT_LFS_SKIP_SMUDGE=1 git -C "${dimos_source_dir}" archive \
+    --format=tar.gz \
+    --output="${project_dir}/vendor/dimos-upstream.tar.gz" \
+    "${dimos_commit}"
+elif [[ ! -s "${project_dir}/vendor/dimos-upstream.tar.gz" ]]; then
+  echo "Missing the tracked DimOS archive and no checkout was supplied." >&2
   exit 1
 fi
-GIT_LFS_SKIP_SMUDGE=1 git -C "${dimos_source_dir}" archive \
-  --format=tar.gz \
-  --output="${project_dir}/vendor/dimos-upstream.tar.gz" \
-  "${dimos_commit}"
 
 "${uv_bin}" run --extra dev pytest
 "${uv_bin}" build --wheel --out-dir dist
@@ -41,7 +43,7 @@ trap 'rm -rf -- "${staging_dir}"' EXIT
 install -d "${staging_dir}/${bundle_name}/dist"
 cp dist/pawguide-*.whl "${staging_dir}/${bundle_name}/dist/"
 cp dist/requirements-edge.txt "${staging_dir}/${bundle_name}/dist/"
-cp -R config contracts docs pixel provision vendor README.md \
+cp -R config contracts docs provision vendor README.md \
   "${staging_dir}/${bundle_name}/"
 
 (

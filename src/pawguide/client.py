@@ -1,4 +1,4 @@
-"""Small Hetzner-side client for the PawGuide edge application bridge."""
+"""Small developer client for the PawGuide edge application bridge."""
 
 from __future__ import annotations
 

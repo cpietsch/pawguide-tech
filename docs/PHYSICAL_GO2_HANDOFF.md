@@ -1,139 +1,102 @@
-# Physical Go2 handoff
+# Physical Go2 operations
 
-> **Current deployment:** use
-> [CURRENT_RECOVERY_RUNBOOK.md](CURRENT_RECOVERY_RUNBOOK.md). The material
-> below records the earlier full-DimOS commissioning design and is not the
-> active lightweight physical profile.
+The RDK X5 is the sole normal physical control gateway. The complete rebuild
+procedure is in
+[`CURRENT_RECOVERY_RUNBOOK.md`](CURRENT_RECOVERY_RUNBOOK.md); this file covers
+the currently deployed physical profile.
 
-This is the operational handoff from the qualified simulation to the physical
-Unitree Go2 Air. The X5 is connected to the robot and the real adapter is
-running, but the gateway remains deliberately fail-closed until an operator
-starts the heartbeat and explicitly arms it.
+## Verified deployment
 
-## Prepared state
+Observed on 2026-07-26:
 
-As verified on 2026-07-26:
+- X5 private-network address: `100.72.30.53`;
+- production gateway: `http://100.72.30.53:8765`;
+- physical MCP: X5 loopback `127.0.0.1:9990`;
+- adapter: `dimos_mcp`, motion capable;
+- exact waypoint IDs: `home`, `demo_gate`;
+- Go2 LocalAP control address: `192.168.12.1` over X5 `wlan0`;
+- Go2 AP SSID: `Go_62554`;
+- commissioned X5 Wi-Fi lease: `192.168.12.13/24`;
+- China command center:
+  `http://100.102.208.90:7780/command-center`;
+- simulation gateway `:8876` remains isolated from physical control.
 
-- X5 is online over Tailscale and uses Pixel USB tethering for its default
-  route;
-- production gateway `:8765` is active with the physical `dimos_mcp` adapter;
-- physical MCP is active with the direct posture, STOP, and bounded-route
-  toolset;
-- simulation gateway `:8876` remains independent and operational;
-- the current physical allowlist is exactly `home,demo_gate`;
-- the DimOS Go2 import succeeds with the pinned PyYAML dependency;
-- physical enablement now runs the complete `--require-physical` readiness
-  gate before starting DimOS or switching the gateway adapter;
-- the command center is a tokenless kiosk with bounded physical controls and a
-  large STOP button;
-- the target Wi-Fi is `Go_62554`; the X5 has joined it and received
-  `192.168.12.13/24`;
-- live routing and ping verified that this unit's LocalAP control address is
-  `192.168.12.1`; the separately supplied `10.88.15.7` address is not
-  reachable on this AP and is not used by the physical runtime;
-- its root-owned NetworkManager profile and root-owned Unitree credential are
-  installed on the X5 without storing either secret in this repository.
+The saved Wi-Fi profile is selected by SSID without a BSSID lock because the
+separately supplied hardware MAC was not verified as the AP radio BSSID. The
+AP password and Unitree credential are installed as root-owned external
+state; their values are not stored in this repository.
 
-No physical waypoint pose has been fabricated from simulation. `home` and
-`demo_gate` must be recorded from the real robot at the venue.
+## Current direct bridge
 
-## Remaining physical input
+The physical service starts `provision/direct-go2-mcp.py` through
+`provision/run-dimos-x5.sh`. It provides:
 
-The supplied network and AES information is installed, association and routing
-are verified, and the software readiness gate passes. The supplied MAC did not
-match the Wi-Fi BSSID, so the saved profile uses the exact SSID rather than an
-incorrect BSSID lock. After physical confirmation of the support stand, clear
-leg envelope, charged battery, X5 power/cooling, operator, spotter, and
-immediate STOP access, the real adapter was enabled. The gateway remains
-STOP-latched with no heartbeat and no active waypoint; enabling the adapter
-did not arm the robot.
+- RecoveryStand, Sit, and Hello through `execute_sport_command`;
+- a best-effort redundant STOP sequence;
+- `demo_gate`, a bounded forward movement at `0.2 m/s` for five seconds;
+- `home`, the matching bounded reverse movement.
 
-Do not paste passwords or the AES key into chat or shell arguments. Enter them
-only into the hidden/local prompts below.
+The bridge enables obstacle avoidance before bounded travel. STOP interrupts
+the motion loop. Waypoint state exists only in bridge process memory and
+resets to `home` when the service restarts. Reposition the robot at the assumed
+home pose before using the route after any restart.
 
-## Connect the robot
+This profile does not map the room, persist a physical pose, or perform SLAM.
+The larger exact-waypoint navigation course is simulation-only.
 
-When the robot is powered, the saved profile should autoconnect. On the X5:
+## Checks
+
+On the X5:
 
 ```bash
-ssh sunrise@100.72.30.53
 sudo /opt/pawguide/bin/check-x5-readiness.sh --require-physical
+systemctl is-active pawguide-dimos pawguide-gateway
+curl -fsS http://127.0.0.1:8765/health
+ip -4 route get 192.168.12.1
 ```
 
-The readiness command must finish with zero failures. Specifically verify that
-the configured robot address routes over `wlan0`, while the default route
-remains on Pixel USB/Ethernet.
+The route must use `wlan0`, while the default route uses an independent
+uplink. Expected gateway health:
 
-## Supported-off-ground enable
+```json
+{"status":"ok","adapter":"dimos_mcp","motion_capable":true}
+```
 
-Only with the Go2 physically supported, feet clear, official app closed, and a
-spotter ready:
+The command center maintains the operator heartbeat and resets STOP before an
+action. China nginx supplies the credential server-side, so the browser does
+not ask for or receive it.
+
+## Enable and disable
+
+The installer leaves physical motion disabled. After the local readiness check
+passes:
 
 ```bash
 sudo /opt/pawguide/bin/enable-real-motion.sh \
   --i-understand-this-can-move-the-robot
 ```
 
-This command starts the direct physical MCP bridge, verifies the current
-minimal physical toolset, switches the production gateway to `dimos_mcp`, and
-leaves STOP latched. A failure rolls back to mock mode.
+The command starts the direct MCP bridge, verifies the minimal physical tool
+set, switches the gateway to the real adapter, and leaves STOP latched.
 
-The X5 installer pins the official ARM CPU build of Torch. Do not replace it
-with the default PyPI ARM package, which resolves a large CUDA 13 stack that is
-not used by this control path. Pixel owns showcase audio, so PulseAudio is
-disabled by default in the headless physical service.
-
-LCM multicast, its loopback route, and receive buffers are prepared by the
-separate root-only `pawguide-lcm-network.service`. DimOS itself remains
-unprivileged and may use netlink only for read-only network checks. The
-physical runtime and gateway were verified active with isolated loopback ports
-before operator handoff.
-
-Confirm:
-
-```bash
-curl -fsS http://127.0.0.1:8765/health
-```
-
-Expected:
-
-```json
-{"status":"ok","adapter":"dimos_mcp","motion_capable":true}
-```
-
-Then use `http://100.102.208.90:7780/command-center`. China nginx supplies the
-X5 operator credential; the browser does not ask for or receive it. Follow the
-current procedure in `docs/CURRENT_RECOVERY_RUNBOOK.md`.
-
-## Historical exact-waypoint commissioning API
-
-The API below belongs to the full navigation profile and is not exposed by the
-current direct physical MCP bridge. The current `demo_gate` ID means the
-bounded one-metre commissioning route documented in the recovery runbook.
-
-The app does not need direct DimOS access. With an operator token, a fresh
-heartbeat, STOP still latched, and the robot visually confirmed stationary:
-
-```http
-POST /v1/commissioning/waypoints/home
-Authorization: Bearer <operator-token>
-Content-Type: application/json
-
-{"confirm_stationary":true}
-```
-
-Use the same route with `demo_gate`. Non-allowlisted names, a stale heartbeat,
-a released STOP, invalid confirmation, or a non-operator token fail closed.
-The admin command center exposes this as **Record current pose**.
-
-## Immediate rollback
-
-At any time:
+Rollback:
 
 ```bash
 sudo /opt/pawguide/bin/disable-real-motion.sh
 ```
 
-This sends a best-effort redundant STOP, restores the mock adapter, restarts
-the gateway, and disables physical DimOS. The direct physical STOP uses Damp;
-keep physical support available throughout the posture test.
+Rollback sends a best-effort STOP, restores the mock adapter, restarts the
+gateway, and disables the physical bridge.
+
+## Restart rule
+
+After the Go2, X5, or physical service restarts:
+
+1. position the robot at the intended `home` pose;
+2. verify LocalAP routing and gateway health;
+3. confirm the gateway is STOP-latched with no active waypoint;
+4. start a fresh command-center session;
+5. test one posture command before using the bounded route.
+
+An accepted HTTP result confirms dispatch only. Observe the robot before
+sending the next physical action.

@@ -1,8 +1,8 @@
 # Current deployment recovery runbook
 
 This is the authoritative recovery handoff for the deployment verified on
-2026-07-26. Older commissioning documents explain how the system evolved, but
-this file describes the current runtime.
+2026-07-26. It describes the supported runtime without relying on historical
+commissioning paths.
 
 ## Source of truth
 
@@ -14,6 +14,8 @@ this file describes the current runtime.
   `vendor/dimos-upstream.tar.gz` and `vendor/dimos-pawguide.patch`.
 - Non-secret runtime versions and verified file parity are recorded in
   `docs/RUNTIME_MANIFEST.md`.
+- The exhaustive installed-to-tracked file map is
+  `docs/DEPLOYMENT_INVENTORY.md`.
 
 Generated credentials, SSH private keys, Tailscale enrollment, and the Go2
 network/AES credentials are deliberately not in GitHub. Their required
@@ -38,11 +40,15 @@ locations are listed below.
 The physical and simulation MCP ports must never be collapsed back onto the
 same loopback listener.
 
+The verified robot network SSID is `Go_62554`. The X5 received
+`192.168.12.13/24` during commissioning. Its saved profile is selected by
+SSID, without a BSSID lock, because the separately supplied hardware MAC was
+not verified as the AP radio BSSID.
+
 ## Current physical profile
 
-`provision/run-dimos-x5.sh` defaults to the `sport` profile and starts
-`provision/direct-go2-mcp.py`. This profile is intentionally smaller than the
-full simulation stack.
+`provision/run-dimos-x5.sh` starts `provision/direct-go2-mcp.py`. The physical
+profile is intentionally smaller than the simulation stack.
 
 It exposes:
 
@@ -68,9 +74,8 @@ Gateway startup is fail-closed and sends Damp while latching STOP. The browser
 automatically maintains the operator heartbeat and resets STOP before an
 action. The large red STOP button remains available during the bounded route.
 
-The command center no longer embeds Rerun, asks for a token, or exposes the
-older unlock/arm ceremony. China nginx injects the X5 operator credential
-server-side for `/admin/api/physical/`.
+The command center does not embed Rerun or ask for a token. China nginx injects
+the X5 operator credential server-side for `/admin/api/physical/`.
 
 ## Secrets and external state
 
@@ -86,26 +91,34 @@ Recreation requires these inputs outside GitHub:
 | Generated nginx auth include | China `/etc/pawguide/nginx-operator-auth.conf` |
 | Hyper SSH private key | China `/root/.ssh/pawguide_gpu_server` |
 | China deployment SSH identity | External deploy host, configured explicitly |
-| Tailscale auth keys/state | Each node's local Tailscale installation |
+| China Tailscale machine state | China `/var/lib/tailscale/tailscaled.state` |
+| X5 Tailscale machine state | X5 `/var/lib/tailscale/tailscaled.state` |
 
 Do not substitute the China mock gateway's operator token for the X5 operator
 token. The admin installer must use the mirrored X5 token.
 
+The tracked services use the observed private addresses directly. Preserve the
+two Tailscale machine-state files securely if the same node identities and
+addresses must survive a disk rebuild. If either identity is reissued, replace
+the affected China/X5 addresses in the nginx site, tunnel unit, simulation
+relay unit, simulation environment, and recovery documentation before
+installation.
+
 ## Rebuild the X5
 
-Build the X5 bundle on a Linux development host with `uv`, Git LFS, and a clean
-checkout of the pinned DimOS commit:
+Build the X5 bundle on a Linux development host with `uv` and a clean PawGuide
+checkout. The tracked upstream archive is sufficient:
 
 ```bash
 git clone https://github.com/cpietsch/pawguide-tech.git
 cd pawguide-tech
 git switch main
-git lfs pull
-git clone https://github.com/dimensionalOS/dimos.git /root/dimos
-git -C /root/dimos checkout --detach \
-  4a78e1400c4334c280970e4610c655d16b9661ae
 ./provision/build-edge-bundle.sh x5
 ```
+
+If `/root/dimos` exists at the pinned commit, the builder refreshes the
+tracked archive from it before packaging. Otherwise it uses the tracked
+archive as-is.
 
 Copy and extract `dist/pawguide-x5-mvp.tar.gz` on the X5. Then:
 
@@ -120,9 +133,10 @@ sudo provision/enable-real-motion.sh \
   --i-understand-this-can-move-the-robot
 ```
 
-The Wi-Fi and credential scripts use hidden/local prompts. The Go2 profile
-must set `ipv4.never-default=yes`, leaving internet/Tailscale on the Pixel USB
-or another independent uplink.
+The Wi-Fi and credential scripts use hidden/local prompts. Enter
+`Go_62554` when the network script asks for the SSID. The Go2 profile must set
+`ipv4.never-default=yes`, leaving internet/Tailscale on the Pixel USB or
+another independent uplink.
 
 To restore the optional isolated simulation gateway:
 
@@ -154,9 +168,13 @@ sudo provision/install-china-admin.sh
 ```
 
 `sync-x5-operator-token.sh` streams the token over the existing authenticated
-SSH path without printing it. `install-china-admin.sh` installs the tracked
-dashboard, nginx configuration, and Hyper tunnel unit. It enables the Hyper
-tunnel only when `/root/.ssh/pawguide_gpu_server` exists.
+SSH path without printing it. Its default target is
+`sunrise@100.72.30.53`, and that account must already have authenticated SSH
+access plus passwordless sudo for the single root-owned token read. Override
+the target with `PAWGUIDE_X5_SSH_HOST` when restoring a different access
+policy. `install-china-admin.sh` installs the tracked dashboard, nginx
+configuration, and Hyper tunnel unit. It enables the Hyper tunnel only when
+`/root/.ssh/pawguide_gpu_server` exists.
 
 Verify:
 

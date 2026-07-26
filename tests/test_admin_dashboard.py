@@ -9,6 +9,7 @@ ROOT = Path(__file__).parents[1]
 DASHBOARD = ROOT / "provision" / "pawguide-admin-dashboard.html"
 SCRIPT = ROOT / "provision" / "pawguide-admin-dashboard.js"
 NGINX = ROOT / "provision" / "pawguide-admin.nginx.conf"
+AUTH_INSTALLER = ROOT / "provision" / "install-admin-auth.sh"
 
 
 def _normalize(value: dict[str, object], now: str) -> dict[str, object]:
@@ -42,33 +43,25 @@ process.stdout.write(JSON.stringify(result));
     return json.loads(result.stdout)
 
 
-def test_dashboard_exposes_physical_control_center_without_rerun_viewer() -> None:
+def test_dashboard_is_a_tokenless_physical_kiosk_controller() -> None:
     html = DASHBOARD.read_text(encoding="utf-8")
 
     assert 'id="viewer"' not in html
     assert 'id="viewer-link"' not in html
     assert "Live 3D Rerun viewer" not in html
-    assert 'id="acceptance-result"' in html
-    assert 'id="sequence-list"' in html
-    assert 'id="acceptance-elapsed"' in html
-    assert 'id="safety-state"' in html
-    assert 'id="evidence-list"' in html
-    assert 'id="control-center"' in html
     assert 'id="stop-command"' in html
-    assert 'id="heartbeat-command"' in html
-    assert 'id="arm-command"' in html
     assert 'id="control-guidance"' in html
-    assert '<option value="physical" selected>' in html
     assert 'data-action="stand_up"' in html
     assert 'data-action="sit_down"' in html
     assert 'data-action="greeting"' in html
     assert 'data-action="return_home"' in html
-    assert 'data-action="go_to_waypoint"' in html
-    assert 'id="tag-waypoint-command"' in html
-    assert 'data-checklist="robot"' in html
-    assert 'data-checklist="venue"' in html
+    assert 'id="operator-token"' not in html
+    assert 'id="gateway-target"' not in html
+    assert 'id="connect-command"' not in html
+    assert 'id="heartbeat-command"' not in html
+    assert 'id="arm-command"' not in html
     assert "ENABLE PHYSICAL CONTROL" not in html
-    assert 'src="/admin/dashboard.js?v=physical-control-3"' in html
+    assert 'src="/admin/dashboard.js?v=kiosk-control-1"' in html
 
     nginx = NGINX.read_text(encoding="utf-8")
     assert "location = /admin/dashboard.js" in nginx
@@ -81,7 +74,14 @@ def test_dashboard_exposes_physical_control_center_without_rerun_viewer() -> Non
     assert "location /admin/api/physical/" in nginx
     assert "proxy_pass http://100.72.30.53:8765/;" in nginx
     assert "location = /admin/status/x5" in nginx
-    assert "proxy_set_header Authorization $http_authorization;" in nginx
+    assert "include /etc/pawguide/nginx-operator-auth.conf;" in nginx
+    assert "proxy_set_header Authorization $http_authorization;" not in nginx.split(
+        "location /admin/api/physical/", 1
+    )[1]
+
+    installer = AUTH_INSTALLER.read_text(encoding="utf-8")
+    assert '${1:-/etc/pawguide/operator.token}' in installer
+    assert "/etc/pawguide/nginx-operator-auth.conf" in installer
 
 
 def test_control_center_generates_only_allowlisted_command_envelopes() -> None:

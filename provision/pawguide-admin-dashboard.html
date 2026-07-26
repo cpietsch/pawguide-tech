@@ -3,278 +3,105 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PawGuide Command Center</title>
+  <title>PawGuide Go2 Controller</title>
   <style>
     * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; margin: 0; }
-    body { overflow: hidden; background: #0a0a0f; }
-    body { display: flex; flex-direction: column; color: #dce3ee; font: 13px system-ui; }
+    html, body { width: 100%; min-height: 100%; margin: 0; }
+    body {
+      color: #eef4ff; background: #090d14;
+      font: 15px system-ui, sans-serif;
+    }
     header {
-      height: 38px; flex: 0 0 38px; display: flex; align-items: center;
-      gap: 18px; padding: 0 14px; background: #111722;
-      border-bottom: 1px solid #303642;
+      min-height: 54px; display: flex; align-items: center;
+      justify-content: space-between; gap: 16px; padding: 10px 20px;
+      background: #111824; border-bottom: 1px solid #2b3545;
     }
-    main { display: flex; flex: 1 1 auto; min-height: 0; }
-    .rail {
-      flex: 1 1 auto; min-width: 0;
-      display: grid; grid-template-columns: minmax(20rem, 28rem) minmax(32rem, 1fr);
+    header strong { font-size: 18px; }
+    .status::before {
+      content: ""; display: inline-block; width: 10px; height: 10px;
+      margin-right: 7px; border-radius: 50%; background: #778196;
     }
-    #control-center {
-      flex: 1 1 auto; min-height: 16rem; overflow: auto;
-      padding: 12px 14px; background: #111722;
+    .status.ok::before { background: #42d392; }
+    .status.fail::before { background: #ff5d68; }
+    main { width: min(960px, 100%); margin: 0 auto; padding: 20px; }
+    #stop-command {
+      width: 100%; min-height: 104px; border: 2px solid #ff6570;
+      border-radius: 14px; color: white; background: #bd2633;
+      font-size: clamp(28px, 5vw, 46px); font-weight: 850;
+      cursor: pointer; box-shadow: 0 8px 30px #780f1a55;
     }
-    .control-header, .control-row {
-      display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    #stop-command:active { transform: translateY(2px); background: #971d28; }
+    #live-state {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px; margin: 16px 0;
     }
-    .control-header { justify-content: space-between; margin-bottom: 10px; }
-    .control-header h2, .commissioning h3 { margin: 0; font-size: 15px; }
-    label { color: #aab5c5; }
-    input, select, button {
-      min-height: 34px; border: 1px solid #3a4658; border-radius: 6px;
-      color: #e7edf7; background: #192231; padding: 6px 9px;
+    .state {
+      padding: 12px; border-radius: 9px; color: #9dacbf;
+      background: #111824; border: 1px solid #2b3545;
     }
-    input[type="password"], input[type="text"] { min-width: 13rem; }
-    button { cursor: pointer; font-weight: 650; }
-    button:hover:not(:disabled) { border-color: #83b7ff; }
-    button:disabled { cursor: not-allowed; opacity: .42; }
-    button.stop {
-      min-width: 9rem; color: white; background: #bd2633;
-      border-color: #ff5d68; font-size: 15px;
-    }
-    button.arm { color: #07160f; background: #42d392; border-color: #42d392; }
-    .control-group {
-      margin: 10px 0; padding: 10px; border: 1px solid #303642;
-      border-radius: 8px; background: #0e1420;
-    }
-    .control-group > strong { display: block; margin-bottom: 8px; }
+    .state b { display: block; margin-top: 4px; color: #edf3fc; font-size: 17px; }
     #control-guidance {
-      margin: 0 0 10px; padding: 10px 12px; border-radius: 8px;
-      color: #dce3ee; background: #172235; border: 1px solid #3a5575;
+      margin: 0 0 16px; padding: 12px 14px; border-radius: 9px;
+      background: #172235; border: 1px solid #3a5575;
     }
     #control-guidance.ready {
       color: #b7f7d7; background: #0d271e; border-color: #2b8b63;
     }
-    #live-state {
-      display: grid; grid-template-columns: repeat(2, minmax(8rem, 1fr));
-      gap: 5px 12px; margin-top: 8px; color: #aab5c5;
-    }
-    #command-log {
-      max-height: 8rem; overflow: auto; margin: 8px 0 0; padding: 8px;
-      white-space: pre-wrap; color: #b7c4d6; background: #090d14;
-      border-radius: 6px; font: 11px ui-monospace, monospace;
-    }
-    .warning {
-      color: #ffc857; border-left: 3px solid #ffc857;
-      margin: 8px 0; padding: 6px 9px; background: #211b0d;
-    }
-    .tabs { display: flex; gap: 5px; margin: 10px 0; }
-    .tabs button[aria-selected="true"] { color: #07160f; background: #83b7ff; }
-    .tab-panel[hidden] { display: none; }
-    .checklist { display: grid; gap: 7px; margin-top: 9px; }
-    .checklist label {
-      display: flex; align-items: flex-start; gap: 8px; color: #dce3ee;
-    }
-    .checklist input { min-height: auto; margin-top: 2px; }
-    .commissioning-progress { color: #aab5c5; margin: 8px 0; }
-    .status::before {
-      content: ""; display: inline-block; width: 8px; height: 8px;
-      margin-right: 6px; border-radius: 50%; background: #697386;
-    }
-    .status.ok::before { background: #42d392; }
-    .status.fail::before { background: #ff5d68; }
-    #acceptance-panel {
-      min-width: 0; overflow: auto;
-      padding: 12px 14px; background: #0e1420;
-      border-right: 1px solid #303642;
-    }
-    .acceptance-heading {
-      display: flex; align-items: center; justify-content: space-between;
+    #action-grid {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
-    .acceptance-heading h2 { margin: 0; font-size: 15px; }
-    .badge {
-      padding: 3px 8px; border-radius: 999px; background: #303846;
-      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    #action-grid button {
+      min-height: 84px; border: 1px solid #47617f; border-radius: 12px;
+      color: #f3f7fd; background: #1b2a3e; padding: 12px;
+      font-size: 22px; font-weight: 750; cursor: pointer;
     }
-    .badge.passed { color: #07160f; background: #42d392; }
-    .badge.failed { color: #210609; background: #ff5d68; }
-    .badge.running { color: #1d1400; background: #ffc857; }
-    .acceptance-meta {
-      display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0;
-      color: #aab5c5;
+    #action-grid button:hover:not(:disabled) {
+      border-color: #83b7ff; background: #223753;
     }
-    #safety-state.safe { color: #42d392; }
-    #safety-state.unsafe { color: #ff5d68; }
-    #sequence-list, #evidence-list {
-      margin: 8px 0; padding: 0; list-style: none;
+    #action-grid button:active:not(:disabled) { transform: translateY(2px); }
+    button:disabled { cursor: wait; opacity: .45; }
+    #command-log {
+      min-height: 88px; max-height: 150px; overflow: auto;
+      margin: 16px 0 0; padding: 12px; white-space: pre-wrap;
+      color: #b9c7d9; background: #05080d; border: 1px solid #202937;
+      border-radius: 9px; font: 12px ui-monospace, monospace;
     }
-    #sequence-list li, #evidence-list li {
-      margin: 5px 0; padding-left: 18px; position: relative;
-    }
-    #sequence-list li::before, #evidence-list li::before {
-      content: "○"; position: absolute; left: 0; color: #697386;
-    }
-    #sequence-list li.passed::before, #evidence-list li.passed::before {
-      content: "✓"; color: #42d392;
-    }
-    #sequence-list li.failed::before, #evidence-list li.failed::before {
-      content: "×"; color: #ff5d68;
-    }
-    #sequence-list li.running::before { content: "●"; color: #ffc857; }
-    #acceptance-links { display: flex; gap: 12px; margin-top: 8px; }
-    #acceptance-links a { color: #83b7ff; text-decoration: none; }
-    #acceptance-message { color: #aab5c5; margin: 8px 0 0; }
-    @media (max-width: 850px) {
-      body { overflow: auto; }
-      main { overflow: visible; }
-      .rail { display: flex; flex-direction: column; }
-      #acceptance-panel { max-height: none; border-right: 0; border-bottom: 1px solid #303642; }
+    @media (max-width: 620px) {
+      main { padding: 12px; }
+      #live-state { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #action-grid { grid-template-columns: 1fr; }
+      #action-grid button { min-height: 70px; }
     }
   </style>
 </head>
 <body>
   <header>
-    <strong>PawGuide physical Go2 command center</strong>
-    <span id="x5" class="status">Physical gateway checking</span>
+    <strong>PawGuide Go2</strong>
+    <span id="x5" class="status">Connecting to X5…</span>
   </header>
   <main>
-    <div class="rail">
-      <section id="acceptance-panel" aria-labelledby="acceptance-title">
-        <div class="acceptance-heading">
-          <h2 id="acceptance-title">Concept acceptance</h2>
-          <span id="acceptance-result" class="badge">CHECKING</span>
-        </div>
-        <div class="acceptance-meta">
-          <span id="acceptance-progress">Sequence —</span>
-          <span id="acceptance-elapsed">Elapsed —</span>
-          <span id="safety-state">Safety —</span>
-        </div>
-        <ol id="sequence-list" aria-label="Show-sequence steps"></ol>
-        <ul id="evidence-list" aria-label="Pass and fail evidence"></ul>
-        <p id="acceptance-message">Loading acceptance evidence…</p>
-        <div id="acceptance-links">
-          <a id="artifact-link" target="_blank" rel="noopener" hidden>Open evidence JSON</a>
-        </div>
-      </section>
-      <section id="control-center" aria-labelledby="control-title">
-        <div class="control-header">
-          <h2 id="control-title">Developer control center</h2>
-          <button id="stop-command" class="stop" type="button">STOP NOW</button>
-        </div>
+    <button id="stop-command" type="button">STOP</button>
 
-        <p id="control-guidance" aria-live="polite">Enter the operator token and press Connect. Controls will become live automatically.</p>
-
-        <div class="control-row">
-          <label for="gateway-target">Target</label>
-          <select id="gateway-target">
-            <option value="physical" selected>Physical Go2 · X5 :8765</option>
-            <option value="sim">Simulation · X5 :8876</option>
-          </select>
-          <label for="operator-token">Operator token</label>
-          <input id="operator-token" type="password" autocomplete="off"
-                 placeholder="Kept only in this browser tab">
-          <button id="connect-command" type="button">Connect</button>
-        </div>
-
-        <div class="control-group">
-          <strong>Connection and live state</strong>
-          <div class="control-row">
-            <button id="heartbeat-command" type="button">Start heartbeat</button>
-            <button id="arm-command" class="arm" type="button">Resume after STOP</button>
-            <button id="refresh-command" type="button">Refresh state</button>
-          </div>
-          <div id="live-state" aria-live="polite">
-            <span>Connection: <b id="control-connection">disconnected</b></span>
-            <span>Adapter: <b id="control-adapter">—</b></span>
-            <span>STOP: <b id="control-stop">—</b></span>
-            <span>Heartbeat: <b id="control-heartbeat">off</b></span>
-            <span>Mission: <b id="control-mission">—</b></span>
-            <span>Waypoint: <b id="control-waypoint">—</b></span>
-          </div>
-        </div>
-
-        <div class="control-group">
-          <strong>Robot actions</strong>
-          <div class="control-row">
-            <button data-action="stand_up" type="button">Stand</button>
-            <button data-action="sit_down" type="button">Sit</button>
-            <button data-action="greeting" type="button">Hello gesture</button>
-            <button data-action="pause" type="button">Pause</button>
-            <button data-action="return_home" type="button">Return home</button>
-          </div>
-          <div class="control-row" style="margin-top:8px">
-            <label for="waypoint-command">Exact waypoint</label>
-            <select id="waypoint-command"></select>
-            <button id="go-command" data-action="go_to_waypoint" type="button">Go to waypoint</button>
-            <button id="tag-waypoint-command" type="button">Record current pose</button>
-          </div>
-          <p class="warning">Accepted means dispatched—not physically completed. Keep the Go2 supported and the local STOP immediately available. Pose recording requires a fresh heartbeat while STOP remains latched.</p>
-        </div>
-
-        <div class="tabs" role="tablist" aria-label="Commissioning checklists">
-          <button type="button" role="tab" data-tab="robot-panel" aria-selected="true">Robot commissioning</button>
-          <button type="button" role="tab" data-tab="venue-panel" aria-selected="false">Venue commissioning</button>
-        </div>
-        <section id="robot-panel" class="tab-panel commissioning">
-          <h3>Step 4 · Physical Go2 acceptance</h3>
-          <p class="commissioning-progress" data-progress="robot">0/6 confirmed</p>
-          <div class="checklist" data-checklist="robot">
-            <label><input type="checkbox" value="supported"> Go2 secured for supported-off-ground stand, sit, and Hello tests</label>
-            <label><input type="checkbox" value="commands"> Exact reviewed Unitree commands verified; no arbitrary sport command</label>
-            <label><input type="checkbox" value="floor"> Empty-area lowest-speed floor motion completed</label>
-            <label><input type="checkbox" value="stop-distance"> Physical STOP distance measured and accepted</label>
-            <label><input type="checkbox" value="heartbeat-loss"> Heartbeat-loss STOP measured on the physical Go2</label>
-            <label><input type="checkbox" value="sole-gateway"> X5 verified as the sole normal motion gateway</label>
-          </div>
-        </section>
-        <section id="venue-panel" class="tab-panel commissioning" hidden>
-          <h3>Step 5 · Venue readiness</h3>
-          <p class="commissioning-progress" data-progress="venue">0/7 confirmed</p>
-          <div class="checklist" data-checklist="venue">
-            <label><input type="checkbox" value="mounting"> X5 mounting, power, cooling, straps, and cables inspected</label>
-            <label><input type="checkbox" value="barriers"> Protected lane and physical barriers installed</label>
-            <label><input type="checkbox" value="clearance"> Lane clearance measured for the full route and leg envelope</label>
-            <label><input type="checkbox" value="waypoints"> Real home and demo_gate poses recorded and orientation checked</label>
-            <label><input type="checkbox" value="rehearsal"> Complete 60–90 second route rehearsed under final conditions</label>
-            <label><input type="checkbox" value="operator"> Dedicated operator assigned with local STOP available</label>
-            <label><input type="checkbox" value="spotter"> Safety spotter assigned and stationary fallback agreed</label>
-          </div>
-        </section>
-        <pre id="command-log" aria-live="polite">Control center ready. Enter the operator token to connect.</pre>
-      </section>
+    <div id="live-state" aria-live="polite">
+      <div class="state">Connection<b id="control-connection">connecting…</b></div>
+      <div class="state">STOP state<b id="control-stop">—</b></div>
+      <div class="state">Heartbeat<b id="control-heartbeat">—</b></div>
+      <div class="state">Mission<b id="control-mission">—</b></div>
     </div>
-  </main>
-  <script>
-    async function probe(id, path, label, validate, json = false) {
-      const node = document.querySelector(`#${id}`);
-      const started = performance.now();
-      try {
-        const response = await fetch(path, { cache: "no-store" });
-        const body = json ? await response.json() : await response.text();
-        if (!response.ok || !validate(body)) throw new Error("unhealthy");
-        node.className = "status ok";
-        node.textContent = `${label} ${Math.round(performance.now() - started)} ms`;
-      } catch (_) {
-        node.className = "status fail";
-        node.textContent = `${node.dataset.label || id} offline`;
-      }
-    }
 
-    function refreshStatus() {
-      probe(
-        "x5",
-        "/admin/status/x5",
-        "Physical gateway",
-        body => body.status === "ok"
-          && body.adapter === "dimos_mcp"
-          && body.motion_capable === true,
-        true
-      );
-    }
-    document.querySelector("#x5").dataset.label = "Physical gateway";
-    refreshStatus();
-    setInterval(refreshStatus, 5000);
-  </script>
-  <script src="/admin/dashboard.js?v=physical-control-3"></script>
+    <p id="control-guidance" aria-live="polite">Connecting to the physical Go2…</p>
+
+    <div id="action-grid">
+      <button data-action="stand_up" type="button">Stand</button>
+      <button data-action="sit_down" type="button">Sit</button>
+      <button data-action="greeting" type="button">Hello</button>
+      <button data-action="pause" type="button">Pause</button>
+      <button data-action="return_home" type="button">Return home</button>
+    </div>
+
+    <pre id="command-log" aria-live="polite">Connecting automatically…</pre>
+  </main>
+  <script src="/admin/dashboard.js?v=kiosk-control-1"></script>
 </body>
 </html>

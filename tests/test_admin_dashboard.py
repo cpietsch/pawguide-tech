@@ -42,11 +42,12 @@ process.stdout.write(JSON.stringify(result));
     return json.loads(result.stdout)
 
 
-def test_dashboard_exposes_live_3d_and_acceptance_evidence() -> None:
+def test_dashboard_exposes_physical_control_center_without_rerun_viewer() -> None:
     html = DASHBOARD.read_text(encoding="utf-8")
 
-    assert 'id="viewer"' in html
-    assert 'id="viewer-link"' in html
+    assert 'id="viewer"' not in html
+    assert 'id="viewer-link"' not in html
+    assert "Live 3D Rerun viewer" not in html
     assert 'id="acceptance-result"' in html
     assert 'id="sequence-list"' in html
     assert 'id="acceptance-elapsed"' in html
@@ -56,6 +57,8 @@ def test_dashboard_exposes_live_3d_and_acceptance_evidence() -> None:
     assert 'id="stop-command"' in html
     assert 'id="heartbeat-command"' in html
     assert 'id="arm-command"' in html
+    assert 'id="control-guidance"' in html
+    assert '<option value="physical" selected>' in html
     assert 'data-action="stand_up"' in html
     assert 'data-action="sit_down"' in html
     assert 'data-action="greeting"' in html
@@ -64,8 +67,8 @@ def test_dashboard_exposes_live_3d_and_acceptance_evidence() -> None:
     assert 'id="tag-waypoint-command"' in html
     assert 'data-checklist="robot"' in html
     assert 'data-checklist="venue"' in html
-    assert "ENABLE PHYSICAL CONTROL" in html
-    assert 'src="/admin/dashboard.js"' in html
+    assert "ENABLE PHYSICAL CONTROL" not in html
+    assert 'src="/admin/dashboard.js?v=physical-control-2"' in html
 
     nginx = NGINX.read_text(encoding="utf-8")
     assert "location = /admin/dashboard.js" in nginx
@@ -77,6 +80,7 @@ def test_dashboard_exposes_live_3d_and_acceptance_evidence() -> None:
     assert "proxy_pass http://100.72.30.53:8876/;" in nginx
     assert "location /admin/api/physical/" in nginx
     assert "proxy_pass http://100.72.30.53:8765/;" in nginx
+    assert "location = /admin/status/x5" in nginx
     assert "proxy_set_header Authorization $http_authorization;" in nginx
 
 
@@ -93,32 +97,31 @@ def test_control_center_generates_only_allowlisted_command_envelopes() -> None:
     }
 
 
-def test_motion_controls_require_heartbeat_and_physical_unlock() -> None:
+def test_command_controls_require_only_connection_and_heartbeat() -> None:
     assert (
-        _run_control(
-            "ui.mayDispatch({connected:true, heartbeat:true, "
-            "physical:false, physicalUnlocked:false})"
-        )
+        _run_control("ui.mayDispatch({connected:true, heartbeat:true})")
         is True
     )
     assert (
+        _run_control("ui.mayDispatch({connected:true, heartbeat:false})")
+        is False
+    )
+    assert (
+        _run_control("ui.mayDispatch({connected:false, heartbeat:true})")
+        is False
+    )
+
+
+def test_movement_controls_follow_gateway_stop_state() -> None:
+    assert (
         _run_control(
-            "ui.mayDispatch({connected:true, heartbeat:false, "
-            "physical:false, physicalUnlocked:false})"
+            "ui.mayMove({connected:true, heartbeat:true, stopLatched:true})"
         )
         is False
     )
     assert (
         _run_control(
-            "ui.mayDispatch({connected:true, heartbeat:true, "
-            "physical:true, physicalUnlocked:false})"
-        )
-        is False
-    )
-    assert (
-        _run_control(
-            "ui.mayDispatch({connected:true, heartbeat:true, "
-            "physical:true, physicalUnlocked:true})"
+            "ui.mayMove({connected:true, heartbeat:true, stopLatched:false})"
         )
         is True
     )

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PawGuide Simulation</title>
+  <title>PawGuide Command Center</title>
   <style>
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; }
@@ -15,12 +15,9 @@
       border-bottom: 1px solid #303642;
     }
     main { display: flex; flex: 1 1 auto; min-height: 0; }
-    iframe { border: 0; min-width: 0; }
-    #viewer { flex: 1 1 auto; }
     .rail {
-      flex: 0 0 clamp(24rem, 32vw, 40rem); min-width: 0;
-      display: flex; flex-direction: column;
-      border-left: 1px solid #303642;
+      flex: 1 1 auto; min-width: 0;
+      display: grid; grid-template-columns: minmax(20rem, 28rem) minmax(32rem, 1fr);
     }
     #control-center {
       flex: 1 1 auto; min-height: 16rem; overflow: auto;
@@ -50,6 +47,13 @@
       border-radius: 8px; background: #0e1420;
     }
     .control-group > strong { display: block; margin-bottom: 8px; }
+    #control-guidance {
+      margin: 0 0 10px; padding: 10px 12px; border-radius: 8px;
+      color: #dce3ee; background: #172235; border: 1px solid #3a5575;
+    }
+    #control-guidance.ready {
+      color: #b7f7d7; background: #0d271e; border-color: #2b8b63;
+    }
     #live-state {
       display: grid; grid-template-columns: repeat(2, minmax(8rem, 1fr));
       gap: 5px 12px; margin-top: 8px; color: #aab5c5;
@@ -79,9 +83,9 @@
     .status.ok::before { background: #42d392; }
     .status.fail::before { background: #ff5d68; }
     #acceptance-panel {
-      flex: 0 0 auto; max-height: 48%; overflow: auto;
+      min-width: 0; overflow: auto;
       padding: 12px 14px; background: #0e1420;
-      border-bottom: 1px solid #303642;
+      border-right: 1px solid #303642;
     }
     .acceptance-heading {
       display: flex; align-items: center; justify-content: space-between;
@@ -120,17 +124,20 @@
     #acceptance-links { display: flex; gap: 12px; margin-top: 8px; }
     #acceptance-links a { color: #83b7ff; text-decoration: none; }
     #acceptance-message { color: #aab5c5; margin: 8px 0 0; }
+    @media (max-width: 850px) {
+      body { overflow: auto; }
+      main { overflow: visible; }
+      .rail { display: flex; flex-direction: column; }
+      #acceptance-panel { max-height: none; border-right: 0; border-bottom: 1px solid #303642; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <strong>Pre-hardware simulation</strong>
-    <span id="simulator" class="status">Simulator checking</span>
-    <span id="viewer-status" class="status">3D viewer checking</span>
-    <span id="x5" class="status">X5 checking</span>
+    <strong>PawGuide physical Go2 command center</strong>
+    <span id="x5" class="status">Physical gateway checking</span>
   </header>
   <main>
-    <iframe id="viewer" title="Live 3D Rerun viewer"></iframe>
     <div class="rail">
       <section id="acceptance-panel" aria-labelledby="acceptance-title">
         <div class="acceptance-heading">
@@ -146,7 +153,6 @@
         <ul id="evidence-list" aria-label="Pass and fail evidence"></ul>
         <p id="acceptance-message">Loading acceptance evidence…</p>
         <div id="acceptance-links">
-          <a id="viewer-link" target="_blank" rel="noopener">Open live 3D viewer</a>
           <a id="artifact-link" target="_blank" rel="noopener" hidden>Open evidence JSON</a>
         </div>
       </section>
@@ -156,11 +162,13 @@
           <button id="stop-command" class="stop" type="button">STOP NOW</button>
         </div>
 
+        <p id="control-guidance" aria-live="polite">Enter the operator token and press Connect. Controls will become live automatically.</p>
+
         <div class="control-row">
           <label for="gateway-target">Target</label>
           <select id="gateway-target">
+            <option value="physical" selected>Physical Go2 · X5 :8765</option>
             <option value="sim">Simulation · X5 :8876</option>
-            <option value="physical">Physical gateway · X5 :8765</option>
           </select>
           <label for="operator-token">Operator token</label>
           <input id="operator-token" type="password" autocomplete="off"
@@ -168,21 +176,11 @@
           <button id="connect-command" type="button">Connect</button>
         </div>
 
-        <div id="physical-lock" class="control-group" hidden>
-          <strong>Physical-motion interlock</strong>
-          <p class="warning">This target may control a real Go2. A spotter and immediately available local STOP are mandatory.</p>
-          <label>
-            Type <code>ENABLE PHYSICAL CONTROL</code>
-            <input id="physical-confirmation" type="text" autocomplete="off">
-          </label>
-          <button id="unlock-physical" type="button">Unlock this tab</button>
-        </div>
-
         <div class="control-group">
-          <strong>Safety lease and live state</strong>
+          <strong>Connection and live state</strong>
           <div class="control-row">
             <button id="heartbeat-command" type="button">Start heartbeat</button>
-            <button id="arm-command" class="arm" type="button">Explicitly arm / reset STOP</button>
+            <button id="arm-command" class="arm" type="button">Resume after STOP</button>
             <button id="refresh-command" type="button">Refresh state</button>
           </div>
           <div id="live-state" aria-live="polite">
@@ -196,7 +194,7 @@
         </div>
 
         <div class="control-group">
-          <strong>Bounded robot actions</strong>
+          <strong>Robot actions</strong>
           <div class="control-row">
             <button data-action="stand_up" type="button">Stand</button>
             <button data-action="sit_down" type="button">Sit</button>
@@ -210,7 +208,7 @@
             <button id="go-command" data-action="go_to_waypoint" type="button">Go to waypoint</button>
             <button id="tag-waypoint-command" type="button">Record current pose</button>
           </div>
-          <p class="warning">Accepted means dispatched—not physically completed. Pose recording is physical-target only and requires a fresh heartbeat while STOP remains latched. Confirm posture and arrival visually before every action.</p>
+          <p class="warning">Accepted means dispatched—not physically completed. Keep the Go2 supported and the local STOP immediately available. Pose recording requires a fresh heartbeat while STOP remains latched.</p>
         </div>
 
         <div class="tabs" role="tablist" aria-label="Commissioning checklists">
@@ -247,13 +245,6 @@
     </div>
   </main>
   <script>
-    const viewerOrigin = `${location.protocol}//${location.hostname}:9879`;
-    const proxyUrl = `rerun+http://${location.hostname}:9879/proxy`;
-    document.querySelector("#viewer").src =
-      `${viewerOrigin}/?url=${encodeURIComponent(proxyUrl)}`;
-    document.querySelector("#viewer-link").href =
-      `${viewerOrigin}/?url=${encodeURIComponent(proxyUrl)}`;
-
     async function probe(id, path, label, validate, json = false) {
       const node = document.querySelector(`#${id}`);
       const started = performance.now();
@@ -270,24 +261,20 @@
     }
 
     function refreshStatus() {
-      probe("simulator", "/admin/status/simulator", "Simulator", body => body.startsWith("0{"));
-      probe("viewer-status", "/admin/status/viewer", "3D viewer", body => body.includes("re_viewer"));
       probe(
         "x5",
         "/admin/status/x5",
-        "X5",
+        "Physical gateway",
         body => body.status === "ok"
           && body.adapter === "dimos_mcp"
           && body.motion_capable === true,
         true
       );
     }
-    document.querySelector("#simulator").dataset.label = "Simulator";
-    document.querySelector("#viewer-status").dataset.label = "3D viewer";
-    document.querySelector("#x5").dataset.label = "X5";
+    document.querySelector("#x5").dataset.label = "Physical gateway";
     refreshStatus();
     setInterval(refreshStatus, 5000);
   </script>
-  <script src="/admin/dashboard.js"></script>
+  <script src="/admin/dashboard.js?v=physical-control-2"></script>
 </body>
 </html>

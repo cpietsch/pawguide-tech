@@ -265,9 +265,6 @@
     const artifact = document.querySelector("#artifact-link");
     artifact.hidden = !value.artifact_url;
     if (value.artifact_url) artifact.href = value.artifact_url;
-    if (value.viewer_url) {
-      document.querySelector("#viewer-link").href = value.viewer_url;
-    }
   }
 
   async function refreshAcceptance() {
@@ -301,8 +298,6 @@
     sim: "/admin/api/sim",
     physical: "/admin/api/physical",
   });
-  const PHYSICAL_UNLOCK_PHRASE = "ENABLE PHYSICAL CONTROL";
-
   function commandEnvelope(action, argumentsValue = {}, commandId) {
     return {
       command_id: commandId || crypto.randomUUID(),
@@ -311,12 +306,13 @@
     };
   }
 
-  function mayDispatch({ connected, heartbeat, physical, physicalUnlocked }) {
-    return Boolean(
-      connected
-      && heartbeat
-      && (!physical || physicalUnlocked)
-    );
+  function mayDispatch({ connected, heartbeat }) {
+    return Boolean(connected && heartbeat);
+  }
+
+  function mayMove({ connected, heartbeat, stopLatched }) {
+    return mayDispatch({ connected, heartbeat })
+      && stopLatched === false;
   }
 
   function createControlCenter(doc, storage = root.localStorage) {
@@ -325,7 +321,6 @@
       capabilities: null,
       heartbeatTimer: null,
       heartbeat: false,
-      physicalUnlocked: false,
       stopLatched: null,
     };
     const byId = (id) => doc.querySelector(`#${id}`);
@@ -391,42 +386,58 @@
 
     function renderControls() {
       const physical = target() === "physical";
-      byId("physical-lock").hidden = !physical;
       byId("heartbeat-command").textContent =
         state.heartbeat ? "Stop heartbeat" : "Start heartbeat";
       byId("control-connection").textContent =
         state.connected ? "connected" : "disconnected";
-      const enabled = mayDispatch({
+      const dispatchReady = mayDispatch({
         connected: state.connected,
         heartbeat: state.heartbeat,
-        physical,
-        physicalUnlocked: state.physicalUnlocked,
+      });
+      const movementReady = mayMove({
+        connected: state.connected,
+        heartbeat: state.heartbeat,
+        stopLatched: state.stopLatched,
       });
       actionButtons.forEach((button) => {
-        button.disabled = !enabled;
+        button.disabled = !movementReady;
       });
-      byId("arm-command").disabled = !enabled;
-      byId("heartbeat-command").disabled =
-        !state.connected || (physical && !state.physicalUnlocked);
+      byId("arm-command").disabled = !dispatchReady;
+      byId("heartbeat-command").disabled = !state.connected;
       byId("stop-command").disabled =
         !state.connected || !token();
       byId("tag-waypoint-command").disabled = !(
-        enabled
+        dispatchReady
         && physical
         && state.stopLatched === true
       );
+
+      const guidance = byId("control-guidance");
+      guidance.className = movementReady ? "ready" : "";
+      if (!state.connected) {
+        guidance.textContent =
+          "Enter the operator token and press Connect. Controls will become live automatically.";
+      } else if (!state.heartbeat) {
+        guidance.textContent = "Connection is live; restarting the control heartbeat…";
+      } else if (state.stopLatched !== false) {
+        guidance.textContent =
+          "STOP is latched. Press Resume after STOP to make movement controls live.";
+      } else {
+        guidance.textContent =
+          "Ready: STOP is released. Sit, Stand, and the other bounded actions are enabled.";
+      }
     }
 
     async function refreshState() {
       const snapshot = await request("/v1/state");
       renderState(snapshot);
+      renderControls();
       return snapshot;
     }
 
     async function connect() {
       stopHeartbeat(false);
       state.connected = false;
-      state.physicalUnlocked = false;
       renderControls();
       try {
         const [capabilities, snapshot] = await Promise.all([
@@ -451,6 +462,9 @@
           motion_capable: capabilities.motion_capable,
           waypoints: capabilities.allowed_waypoints,
         });
+        renderControls();
+        await toggleHeartbeat();
+        await sendCommand("reset_stop");
       } catch (error) {
         byId("control-adapter").textContent = "—";
         log("Connection failed", error.message);
@@ -465,6 +479,7 @@
           body: JSON.stringify({ source: "tailscale-admin-control-center" }),
         });
         renderState(snapshot);
+        renderControls();
       } catch (error) {
         log("Heartbeat failed; lease stopped", error.message);
         stopHeartbeat(false);
@@ -498,14 +513,21 @@
     }
 
     async function sendCommand(action, argumentsValue = {}) {
-      if (action !== "stop" && !mayDispatch({
+      const dispatchReady = mayDispatch({
         connected: state.connected,
         heartbeat: state.heartbeat,
-        physical: target() === "physical",
-        physicalUnlocked: state.physicalUnlocked,
-      })) {
-        throw new Error("start the heartbeat and unlock the selected target first");
+      });
+      if (action !== "stop" && !dispatchReady) {
+        throw new Error("connect and start the heartbeat first");
       }
+      if (
+        action !== "stop"
+        && action !== "reset_stop"
+        && state.stopLatched !== false
+      ) {
+        throw new Error("press Resume after STOP before issuing movement");
+      }
+      log(`Sending ${action}…`);
       const result = await request("/v1/commands", {
         method: "POST",
         body: JSON.stringify(commandEnvelope(action, argumentsValue)),
@@ -519,12 +541,11 @@
     async function tagWaypoint() {
       if (
         target() !== "physical"
-        || !state.physicalUnlocked
         || !state.heartbeat
         || state.stopLatched !== true
       ) {
         throw new Error(
-          "physical target, unlock, fresh heartbeat, and latched STOP are required"
+          "physical target, fresh heartbeat, and latched STOP are required"
         );
       }
       const waypointId = byId("waypoint-command").value;
@@ -537,17 +558,6 @@
       );
       log(`Recorded exact waypoint ${waypointId}`, result.detail);
       return result;
-    }
-
-    function unlockPhysical() {
-      state.physicalUnlocked =
-        byId("physical-confirmation").value === PHYSICAL_UNLOCK_PHRASE;
-      log(
-        state.physicalUnlocked
-          ? "Physical target unlocked for this browser tab"
-          : "Physical unlock phrase did not match"
-      );
-      renderControls();
     }
 
     function initializeChecklists() {
@@ -607,13 +617,10 @@
     byId("gateway-target").addEventListener("change", () => {
       stopHeartbeat(false);
       state.connected = false;
-      state.physicalUnlocked = false;
-      byId("physical-confirmation").value = "";
       renderControls();
       log(`Target changed to ${target()}; reconnect required`);
     });
     byId("operator-token").addEventListener("input", renderControls);
-    byId("unlock-physical").addEventListener("click", unlockPhysical);
     doc.querySelectorAll('[role="tab"]').forEach((tab) => {
       tab.addEventListener("click", () => {
         doc.querySelectorAll('[role="tab"]').forEach((item) =>
@@ -640,9 +647,9 @@
 
   const api = {
     TARGETS,
-    PHYSICAL_UNLOCK_PHRASE,
     commandEnvelope,
     mayDispatch,
+    mayMove,
     createControlCenter,
   };
   if (typeof module !== "undefined" && module.exports) {

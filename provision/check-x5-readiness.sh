@@ -199,14 +199,12 @@ else
   pass "physical DimOS service remains inactive in mock mode"
 fi
 
-temperature_count="$(
-  find /sys/class/thermal \
-    -maxdepth 2 \
-    -type f \
-    -name 'temp' \
-    2>/dev/null |
-    wc -l
-)"
+temperature_count=0
+for temperature_path in /sys/class/thermal/thermal_zone*/temp; do
+  if [[ -r "${temperature_path}" ]]; then
+    temperature_count=$((temperature_count + 1))
+  fi
+done
 if [[ "${temperature_count}" -ge 1 ]]; then
   pass "RDK thermal sensors are exposed"
 else

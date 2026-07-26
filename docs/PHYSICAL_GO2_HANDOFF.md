@@ -19,9 +19,11 @@ As verified on 2026-07-26:
   gate before starting DimOS or switching the gateway adapter;
 - the command center contains the bounded physical controls, per-tab
   interlock, readiness checklists, and guarded exact-waypoint recording.
-- the target unit is tracked as `Go2 62554`, with supplied robot address
-  `10.88.15.7`; that address is configuration, not assumed from the usual
-  `192.168.12.1` LocalAP default;
+- the target Wi-Fi is `Go_62554`; the X5 has joined it and received
+  `192.168.12.13/24`;
+- live routing and ping verified that this unit's LocalAP control address is
+  `192.168.12.1`; the separately supplied `10.88.15.7` address is not
+  reachable on this AP and is not used by the physical runtime;
 - its root-owned NetworkManager profile and root-owned Unitree credential are
   installed on the X5 without storing either secret in this repository.
 
@@ -30,11 +32,12 @@ No physical waypoint pose has been fabricated from simulation. `home` and
 
 ## Remaining physical input
 
-The supplied network and AES information is installed. The robot still needs
-to be powered and within Wi-Fi range. The X5 has not yet observed the supplied
-BSSID or reached `10.88.15.7`, so real motion remains disabled. Physical
-confirmation of the support stand, clear leg envelope, charged battery, X5
-power/cooling, operator, spotter, and immediate STOP access is also required.
+The supplied network and AES information is installed, association and routing
+are verified, and the software readiness gate passes. The supplied MAC did not
+match the Wi-Fi BSSID, so the saved profile uses the exact SSID rather than an
+incorrect BSSID lock. Real motion remains disabled until physical confirmation
+of the support stand, clear leg envelope, charged battery, X5 power/cooling,
+operator, spotter, and immediate STOP access.
 
 Do not paste passwords or the AES key into chat or shell arguments. Enter them
 only into the hidden/local prompts below.

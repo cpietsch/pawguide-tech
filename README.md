@@ -15,6 +15,17 @@ HTTP API defined in
 [`contracts/pawguide-openapi.json`](contracts/pawguide-openapi.json). They do
 not connect to DimOS or the Go2 directly.
 
+## The two repositories
+
+PawGuide is two independent systems meeting in the middle, connected by a single
+OpenAPI contract:
+
+| Repo | Side | Contents |
+|---|---|---|
+| **[Litorian113/PawGuide](https://github.com/Litorian113/PawGuide)** (this repo) | Experience stack | Native SwiftUI iOS app, Zilo voice-ring integration, Claude personality, bilingual voice pipeline, exhibition website |
+| **[cpietsch/pawguide-tech](https://github.com/cpietsch/pawguide-tech)** | Robot stack | Python command center, RDK X5 motion gateway on the dog, DimOS/MuJoCo simulation, provisioning & safety interlocks |
+
+
 ## Current physical behavior
 
 The X5 is the sole normal motion gateway. Its current physical MCP bridge
